@@ -154,7 +154,10 @@ export function isSoftwareRenderer(renderer: THREE.WebGLRenderer): boolean {
   }
 }
 
-export function createStage(canvas: HTMLCanvasElement): Stage {
+export function createStage(
+  canvas: HTMLCanvasElement,
+  wallpaper: HTMLImageElement | null
+): Stage {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     alpha: true,
@@ -218,7 +221,7 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
   const maxAniso = software ? 1 : renderer.capabilities.getMaxAnisotropy()
 
   performance.mark('dsh:screen:start')
-  const screenTex = createScreenTexture(maxAniso)
+  const screenTex = createScreenTexture(maxAniso, wallpaper)
   performance.mark('dsh:screen:end')
   performance.measure('dsh:screen', 'dsh:screen:start', 'dsh:screen:end')
 

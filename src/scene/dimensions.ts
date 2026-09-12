@@ -58,14 +58,11 @@ export const MM = {
   bezelSide: 3.73, // 7/135 of the width
   bezelTop: 16.0,
   bezelBottom: 15.4,
-  /** The sheet draws a square-cornered panel, but nothing shipping looks
-      like that: a real display's corners are concentric with the cover
-      glass and clearly round. Kept here as a deliberate departure from
-      the sheet, because the square version is a large part of why the
-      front read as a mock-up. Concentric with the flat face would be
-      8.5 - 1.23; 7 is a shade tighter and reads correctly at every
-      camera distance. */
-  screenRadius: 7,
+  /** Square. The panel went from 2 to 7 while the front read as a
+      mock-up, on the theory that nothing shipping has a right-angled
+      display; it is back to 0 by request, and at this size the lit corner
+      is hidden under the bezel's own corner radius anyway. */
+  screenRadius: 0,
 
   /** Earpiece slot. Note it sits BELOW the camera dot in the sheet.
       Both moved up with the bezel, by a little less than the bezel shrank

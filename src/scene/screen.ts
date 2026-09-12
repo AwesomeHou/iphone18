@@ -27,7 +27,7 @@ const CARD = {
      212 units of extra panel height, and the list has to grow into it:
      eighteen cards at the old pitch left a visibly empty strip above the
      home indicator. */
-  pitch: 348,
+  pitch: 364,
   first: 1980,
   r: 48,
 }
@@ -64,7 +64,8 @@ type Glyph =
 /* The screen is 6:1. Eighteen notifications fit at once without
    scrolling, which is the entire argument the section is making. */
 const NOTICES: Notice[] = [
-  { app: '信息', color: '#34c759', glyph: 'bubble', time: '现在', title: '你的手机太长了', body: '我够不到顶部。' },
+  { app: '超信', color: '#07c160', glyph: 'bubble', time: '现在', title: '诺澜', body: '「我等你」等 7 条新消息' },
+
   { app: '提醒事项', color: '#ff9500', glyph: 'check', time: '15:02', title: '「把 iPhone 18 放进裤袋」', body: '测试结果：失败' },
   { app: '健康', color: '#ff2d55', glyph: 'heart', time: '15:04', title: '今日步数 0 步', body: '你一直站在原地找手机的上半部分' },
   { app: '相机', color: '#8e8e93', glyph: 'cam', time: '15:05', title: '已识别', body: '一根 432 毫米的金属棒' },
@@ -82,7 +83,6 @@ const NOTICES: Notice[] = [
   { app: '照片', color: '#ff2d55', glyph: 'flower', time: '15:50', title: '回忆', body: '「那部很长的手机」共 1 张' },
   { app: '播客', color: '#af52de', glyph: 'mic', time: '15:55', title: '新单集', body: '《为什么它这么长》第 1 集' },
   { app: '设置', color: '#8e8e93', glyph: 'find', time: '16:00', title: '完成设置', body: '还剩 4 项，其中 3 项需要两只手' },
-  { app: '超信', color: '#07c160', glyph: 'bubble', time: '16:04', title: '诺澜', body: '「我等你」等 7 条新消息' },
 ]
 
 /* --- primitives --------------------------------------------------- */
@@ -372,25 +372,88 @@ function appIcon(ctx: CanvasRenderingContext2D, color: string, kind: Glyph, x: n
 }
 
 /* --- wallpaper ----------------------------------------------------
-   A few very large, very soft colour fields over black, the way Apple's
-   own dark wallpapers are built.
+   The display's background, from the supplied art if it loaded and from a
+   procedural fallback if it did not.
 
-   The previous version was the sheet's: a flat #3C4045 with a pale grey
-   sweep walked along a bezier. It matched the reference's measured
-   values and it still read as frosted plastic, because that is what a
-   mid-grey field with a soft white streak through it IS — the eye calls
-   it a backlit panel with a light leak across it, and no amount of cover
-   glass drawn on top changes that. An OLED is black; everything it shows
-   is light added to black. So the base is black and the colour is added,
-   which is also what makes the cover glass's own reflection legible: a
-   reflection can only be seen against a dark panel.
-
-   Radial gradients are inherently soft, so this needs no ctx.filter,
-   which Safari did not ship until 16.4. Elliptical rather than circular:
-   the panel is 6:1, and circular fields on it read as spotlights.
+   The art is a phone-shaped 1080 x 2347; this panel is 6:1. Stretching it
+   would turn every squircle in it into a tall ellipse, which reads as a
+   mistake rather than as a design, so it is tiled down the panel with
+   every other tile flipped. Mirroring makes the seams match by
+   construction, and the art is near-symmetric about its own middle, so
+   the repeat reads as one very long design rather than as three copies of
+   a phone wallpaper.
    ------------------------------------------------------------------ */
 
-function wallpaper(ctx: CanvasRenderingContext2D) {
+/** Where the supplied wall art lives. Swapped by replacing public/wallpaper.jpg. */
+const WALLPAPER_URL = '/wallpaper.jpg'
+
+export function loadWallpaper(): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = (v: HTMLImageElement | null) => {
+      if (settled) return
+      settled = true
+      resolve(v)
+    }
+    // Boot must not wait on the network. The phone can be built without
+    // this: the fallback below is a perfectly good dark wallpaper, and a
+    // hung request would otherwise leave the page with no 3D at all.
+    window.setTimeout(() => done(null), 3000)
+    const img = new Image()
+    img.decoding = 'async'
+    img.onload = () => done(img)
+    img.onerror = () => done(null)
+    img.src = WALLPAPER_URL
+  })
+}
+
+function photoWallpaper(ctx: CanvasRenderingContext2D, photo: HTMLImageElement) {
+  const tileH = photo.height * (VW / photo.width)
+  let y = 0
+  let flip = false
+  while (y < VH) {
+    ctx.save()
+    if (flip) {
+      ctx.translate(0, y + tileH)
+      ctx.scale(1, -1)
+    } else {
+      ctx.translate(0, y)
+    }
+    ctx.drawImage(photo, 0, 0, photo.width, photo.height, 0, 0, VW, tileH)
+    ctx.restore()
+    y += tileH
+    flip = !flip
+  }
+}
+
+/** Scrims top and bottom, so the clock and the home indicator have
+    something to sit on and the panel is darkest at its edges, which is
+    where the cover glass's own reflection is strongest. */
+function wallpaperScrims(ctx: CanvasRenderingContext2D) {
+  const top = ctx.createLinearGradient(0, 0, 0, 1100)
+  top.addColorStop(0, 'rgba(0,0,0,0.45)')
+  top.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = top
+  ctx.fillRect(0, 0, VW, 1100)
+
+  const bottom = ctx.createLinearGradient(0, VH - 1300, 0, VH)
+  bottom.addColorStop(0, 'rgba(0,0,0,0)')
+  bottom.addColorStop(1, 'rgba(0,0,0,0.6)')
+  ctx.fillStyle = bottom
+  ctx.fillRect(0, VH - 1300, VW, 1300)
+}
+
+/**
+ * The fallback, used only if the art fails to load: a few very large, very
+ * soft colour fields over black, the way Apple's own dark wallpapers are
+ * built. An OLED is black; everything it shows is light added to black,
+ * and only a black panel lets the cover glass's reflection be seen.
+
+ * Radial gradients are inherently soft, so this needs no ctx.filter,
+ * which Safari did not ship until 16.4. Elliptical rather than circular:
+ * the panel is 6:1, and circular fields on it read as spotlights.
+ */
+function proceduralWallpaper(ctx: CanvasRenderingContext2D) {
   // Not quite #000. An OLED's off state is black, but the panel is behind
   // glass that is never perfectly clean, and a floor of 3 or 4 keeps the
   // display from looking like a hole cut in the page.
@@ -431,21 +494,12 @@ function wallpaper(ctx: CanvasRenderingContext2D) {
   field(560, 8350, 1500, 1450, '116,30,162', 0.32)
 
   ctx.globalCompositeOperation = 'source-over'
+}
 
-  // Scrims top and bottom, so the clock and the home indicator always
-  // have something to sit on and the panel is darkest at its edges, which
-  // is where the cover glass's own reflection is strongest.
-  const top = ctx.createLinearGradient(0, 0, 0, 1100)
-  top.addColorStop(0, 'rgba(0,0,0,0.5)')
-  top.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = top
-  ctx.fillRect(0, 0, VW, 1100)
-
-  const bottom = ctx.createLinearGradient(0, VH - 1300, 0, VH)
-  bottom.addColorStop(0, 'rgba(0,0,0,0)')
-  bottom.addColorStop(1, 'rgba(0,0,0,0.6)')
-  ctx.fillStyle = bottom
-  ctx.fillRect(0, VH - 1300, VW, 1300)
+function wallpaper(ctx: CanvasRenderingContext2D, photo: HTMLImageElement | null) {
+  if (photo) photoWallpaper(ctx, photo)
+  else proceduralWallpaper(ctx)
+  wallpaperScrims(ctx)
 }
 
 /* --- layers ------------------------------------------------------- */
@@ -510,6 +564,20 @@ function clockAndDate(ctx: CanvasRenderingContext2D) {
   ctx.fillText('9月12日 星期二', VW / 2, 1700)
 }
 
+/**
+ * One notification.
+ *
+ * Icon at the left, then a title with the timestamp trailing on the same
+ * baseline, then the body. The app's NAME is not drawn: it is carried by
+ * the icon's colour and glyph, which is what the reference does and what
+ * iOS's own compact banner does. An earlier version put the app name on
+ * the first line and pushed the title down, which cost the card its
+ * subject — the title is the notification.
+ *
+ * The icon is centred on the card's height rather than aligned to the
+ * first line, so it sits between the two lines the way the reference
+ * does.
+ */
 function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number) {
   const { x, w, h, r } = CARD
   rr(ctx, x, top, w, h, r)
@@ -520,28 +588,28 @@ function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number) {
   ctx.stroke()
 
   const icon = 146
-  appIcon(ctx, n.color, n.glyph, x + 40, top + 32, icon)
+  const pad = 40
+  appIcon(ctx, n.color, n.glyph, x + pad, top + (h - icon) / 2, icon)
 
-  ctx.textAlign = 'left'
+  const textX = x + pad + icon + 30
   ctx.textBaseline = 'alphabetic'
 
-  ctx.fillStyle = 'rgba(255,255,255,0.80)'
-  ctx.font = `500 ${Math.round(15 * PT)}px ${FONT}`
-  ctx.fillText(n.app, x + 40 + icon + 28, top + 96)
-
+  // The timestamp is placed first so the title can be truncated to what is
+  // actually left for it, rather than to a guess.
   ctx.textAlign = 'right'
   ctx.fillStyle = 'rgba(255,255,255,0.52)'
   ctx.font = `400 ${Math.round(13 * PT)}px ${FONT}`
-  ctx.fillText(n.time, x + w - 40, top + 96)
+  ctx.fillText(n.time, x + w - pad, top + 148)
+  const timeW = ctx.measureText(n.time).width
 
   ctx.textAlign = 'left'
   ctx.fillStyle = '#ffffff'
   ctx.font = `600 ${Math.round(17 * PT)}px ${FONT}`
-  ctx.fillText(fit(ctx, n.title, w - 80), x + 40, top + 214)
+  ctx.fillText(fit(ctx, n.title, x + w - pad - timeW - 28 - textX), textX, top + 148)
 
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.font = `400 ${Math.round(17 * PT)}px ${FONT}`
-  ctx.fillText(fit(ctx, n.body, w - 80), x + 40, top + 294)
+  ctx.fillText(fit(ctx, n.body, x + w - pad - textX), textX, top + 262)
 }
 
 function bottomControls(ctx: CanvasRenderingContext2D) {
@@ -611,7 +679,7 @@ function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
   // intended luminance and the OLED read as frosted plastic. Contrast
   // around mid grey first throws the panel's own black away, so only the
   // text and the clock survive to be blurred.
-  const filter = `contrast(3) blur(${Math.max(2, Math.round(gw * 0.014))}px)`
+  const filter = `contrast(3.4) blur(${Math.max(2, Math.round(gw * 0.014))}px)`
   gc.filter = filter
   // Filters are not universally available; if the assignment did not take,
   // compositing the copy back would lift the whole panel instead of
@@ -625,7 +693,7 @@ function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
   // the text, so an additive halo adds almost nothing there and only the
   // highlights actually glow.
   ctx.globalCompositeOperation = 'lighter'
-  ctx.globalAlpha = 0.3
+  ctx.globalAlpha = 0.16
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(glow, 0, 0, w, h)
   ctx.restore()
@@ -633,7 +701,11 @@ function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
 
 /* --- entry point -------------------------------------------------- */
 
-export function createScreenCanvas(targetWidth: number, bloom = true): HTMLCanvasElement {
+export function createScreenCanvas(
+  targetWidth: number,
+  photo: HTMLImageElement | null = null,
+  bloom = true
+): HTMLCanvasElement {
   const scale = targetWidth / VW
   const canvas = document.createElement('canvas')
   canvas.width = targetWidth
@@ -644,7 +716,7 @@ export function createScreenCanvas(targetWidth: number, bloom = true): HTMLCanva
   ctx.setTransform(scale, 0, 0, scale, 0, 0)
   ctx.textBaseline = 'alphabetic'
 
-  wallpaper(ctx)
+  wallpaper(ctx, photo)
   statusBar(ctx)
   lockGlyph(ctx, 1080)
   clockAndDate(ctx)
@@ -667,8 +739,11 @@ export function screenTextureWidth(): number {
   return narrow ? 512 : 1024
 }
 
-export function createScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
-  const canvas = createScreenCanvas(screenTextureWidth())
+export function createScreenTexture(
+  maxAnisotropy: number,
+  photo: HTMLImageElement | null = null
+): THREE.CanvasTexture {
+  const canvas = createScreenCanvas(screenTextureWidth(), photo)
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = Math.min(maxAnisotropy, 16)

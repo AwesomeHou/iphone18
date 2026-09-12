@@ -15,6 +15,16 @@ export function roundedRectShape(width: number, height: number, radius: number):
   const y = -h / 2
 
   const s = new THREE.Shape()
+  // A zero-radius arc is a degenerate path segment, and Earcut is not
+  // obliged to make anything of it. A square panel is square.
+  if (r <= 1e-4) {
+    s.moveTo(x, y)
+    s.lineTo(x + w, y)
+    s.lineTo(x + w, y + h)
+    s.lineTo(x, y + h)
+    s.closePath()
+    return s
+  }
   s.moveTo(x + r, y)
   s.lineTo(x + w - r, y)
   s.absarc(x + w - r, y + r, r, -Math.PI / 2, 0, false)
