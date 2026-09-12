@@ -141,6 +141,24 @@ export function createStudioEquirect(): THREE.CanvasTexture {
   softRect(ctx, 0.58, 0.94, 0.521, 0.60, '#1e1f22', 4)
   softRect(ctx, 0.62, 0.92, 0.60, 0.66, '#8a8985', 10)
 
+  /* --- side structure ------------------------------------------------
+     These are the bands a camera well off the normal reflects, and until
+     now they were one unbroken bright panel from the horizon up. At an
+     oblique angle that is a broad mid-grey with nothing in it, added over
+     the display, and the display reads as frosted plastic. Alternating
+     them gives the band a vertical rhythm, which the aluminium wants
+     anyway and which the glass needs in order to look like glass from the
+     side rather than from the front only. */
+  for (const [u0, u1] of [
+    [0.40, 0.62],
+    [0.88, 1.0],
+    [0.0, 0.1],
+  ]) {
+    softRect(ctx, u0, u1, 0.47, 0.575, '#4a4946', 3)
+    softRect(ctx, u0, u1, 0.605, 0.655, '#e8e6e1', 3)
+    softRect(ctx, u0, u1, 0.68, 0.82, '#33322f', 4)
+  }
+
   /* --- ceiling ------------------------------------------------------- */
   softRect(ctx, 0.0, 1.0, 0.0, 0.05, '#ffffff', 18)
 

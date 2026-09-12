@@ -57,9 +57,11 @@ export function createMaterials(textures: {
     clearcoat: 0.2,
     clearcoatRoughness: 0.4,
     // Lifted above 1 to offset the blanket few percent GTAO takes off
-    // every surface. The sheet has the bezel at #F7F7F8, essentially
-    // paper white.
-    envMapIntensity: 1.45,
+    // every surface, and above that to put back the 16% the cover glass
+    // now takes off the whole front face: the bezel is measured at #F7F7F8
+    // in the sheet, essentially paper white, and it was already the
+    // darkest thing on the phone relative to reference.
+    envMapIntensity: 1.7,
   })
 
   const bodyBack = new THREE.MeshPhysicalMaterial({
@@ -118,25 +120,44 @@ export function createMaterials(textures: {
   })
 
   /**
-   * Additive, black, glossy: the only thing it contributes is the
-   * specular reflection of the studio, laid over whatever is behind it.
-   * An ordinary transparent layer would have its reflection scaled by the
-   * same opacity that makes it see-through, so the glass would come out
-   * both faint and matt.
+   * The glass over the display, and the one place where being clever cost
+   * more than it bought.
+   *
+   * This used to be an ADDITIVE layer: black, glossy, added on top of the
+   * panel. The appeal is that an ordinary transparent layer scales its
+   * reflection by the same opacity that makes it see-through, so the
+   * reflection comes out faint. What additive cannot do is take light
+   * AWAY, and that turned out to matter more. Glass reflects and
+   * transmits from the same budget: where it throws 10% of the room back
+   * at you it also passes 10% less of what is behind it. An additive
+   * layer passes 100% of the panel and adds the reflection on top, so at
+   * an oblique angle the display came out as panel + a broad grey wash,
+   * which is exactly what frosted plastic looks like.
+   *
+   * So it is a real alpha layer now, dimming what is behind it. The
+   * reflection is restored by raising envMapIntensity by the reciprocal
+   * of the opacity, which makes the two terms cancel: the glass puts back
+   * exactly the Fresnel fraction the blend takes away, and the panel
+   * keeps 1 - opacity. That is exact up to about 20 degrees off normal,
+   * which is everything the camera ever sees of this screen; at a true
+   * grazing angle the tone mapper has already compressed the reflection
+   * before the blend scales it, so the last few degrees are dimmer than
+   * they should be. Nobody has ever held a phone at 88 degrees.
+   *
+   * 0.012 roughness, down from 0.03: the reflection has to be a mirror,
+   * not a sheen. Glass is identified by recognising the shape it
+   * reflects, and every bit of roughness turns that shape into a grey
+   * wash that reads as a matte surface.
    */
+  const GLASS_OPACITY = 0.16
   const coverGlass = new THREE.MeshPhysicalMaterial({
     color: 0x000000,
     metalness: 0,
-    // 0.012, down from 0.03. The reflection has to be a mirror, not a
-    // sheen: glass is identified by recognising the shape it reflects,
-    // and every bit of roughness turns that shape into a grey wash that
-    // reads as a matte surface.
     roughness: 0.012,
-    clearcoat: 1,
-    clearcoatRoughness: 0.01,
-    envMapIntensity: 2.6,
+    ior: 1.52,
+    envMapIntensity: 1 / GLASS_OPACITY,
     transparent: true,
-    blending: THREE.AdditiveBlending,
+    opacity: GLASS_OPACITY,
     depthWrite: false,
   })
 
@@ -193,9 +214,14 @@ export function createMaterials(textures: {
    * wall turns the speaker grilles into bright pips instead of holes.
    */
   const cavity = new THREE.MeshStandardMaterial({
-    color: 0x090a0b,
-    metalness: 0.12,
-    roughness: 0.88,
+    // A little off black, and matte. At #090A0B with no specular at all
+    // the inside of a bore has the same value as the inside of a painted
+    // dot; at metalness 0.3 with roughness 0.55 it has enough gloss to
+    // catch the floor bounce and the grille renders as ten white pips
+    // instead. This is the narrow band between the two failures.
+    color: 0x111419,
+    metalness: 0.2,
+    roughness: 0.72,
   })
 
   /** The antenna cap. The sheet has it at #EEEEEF, a clear 39 luminance

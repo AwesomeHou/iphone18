@@ -39,7 +39,7 @@ const RIM = 0.2
 
 /** How deep each pocket bites. */
 const PORT_DEPTH = 5.5
-const HOLE_DEPTH = 3.2
+const HOLE_DEPTH = 4.4
 const LENS_DEPTH = 0.55
 const FLASH_DEPTH = 0.4
 
@@ -51,7 +51,18 @@ interface Recess {
   contains: (x: number, y: number, z: number) => boolean
 }
 
-/** A bore running along Y: the speaker holes, drilled up into the body. */
+/**
+ * A bore running along Y: the speaker holes, drilled up into the body.
+ *
+ * Straight, and deep. A flare was tried and it failed twice: the port
+ * fold looks almost straight up the bore's axis, so a cone shows its
+ * whole inner wall as an annulus, and a downward-facing wall reflects the
+ * floor bounce, which is the brightest thing in this environment. At a
+ * 0.45 mm flare the grille rendered as ten white pips; at 0.12 mm they
+ * were white rings with dark centres. A cylinder's wall is vertical, so
+ * it reflects the side panels instead, and depth is what gives it a
+ * gradient from the lit lip down to the unlit floor.
+ */
 function boreY(
   cx: number,
   cz: number,
@@ -60,7 +71,7 @@ function boreY(
   deepY: number,
   floorY: number
 ): Recess {
-  const geo = new THREE.CylinderGeometry(r, r, Math.abs(floorY - deepY), 12, 1, false)
+  const geo = new THREE.CylinderGeometry(r, r, Math.abs(floorY - deepY), 16, 1, false)
   geo.translate(cx, (deepY + floorY) / 2, cz)
   const rr = (r + GROW) ** 2
   return {

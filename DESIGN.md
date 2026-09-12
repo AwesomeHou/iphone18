@@ -40,7 +40,7 @@
 - 两侧抛光倒角 `#ffffff`，metalness 1，roughness 0.08，边缘那道亮线出自这里
 - 天线带（背面顶部那一栏）`#ffffff`，metalness 0.12，roughness 0.5（参考图 `#EEEEEF`，比它下沿的机身亮 39）
 - 屏幕 `#000000`，只挂 `emissiveMap`，`envMapIntensity` 为 0：真屏幕只贡献自己的自发光，任何漫反射响应都会把房间光糊回面板上
-- 盖板玻璃 加法混合反射层，roughness 0.012：玻璃的身份来自它反射出的形状，粗糙度每加一点都把形状变成灰雾
+- 盖板玻璃 alpha 层，opacity 0.16 / roughness 0.012 / envMapIntensity 1/0.16：压暗背后的面板，再把 Fresnel 份额用反射补回来。加法混合做不到这件事，它只加光不减光，斜看就是一层灰雾
 - 摄像镜头 `#0b1018`，roughness 0.17，iridescence 0.5（伪造镀膜）
 - 背面 logo `#b4b6ba`，metalness 0.6
 

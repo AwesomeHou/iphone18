@@ -265,12 +265,16 @@ export function createPhone(textures: {
      into the body by the boolean in recess.ts, so the bottom edge is
      geometry rather than a dark shape laid on top of it. */
 
-  // A socket tongue, so the port reads as a connector rather than a dent.
+  /* A socket tongue, so the port reads as a connector rather than a dent.
+     It was 3.4 mm tall in a 3.0 mm slot, i.e. taller than the opening, so
+     it plugged the port completely and the fold read as a blocked hole.
+     A real connector's tongue is a thin blade with dark space above and
+     below it, and that space is most of what says "socket". */
   const tongue = new THREE.Mesh(
-    track(new THREE.BoxGeometry(MM.portWidth - 2.2, 3.4, 1.1)),
+    track(new THREE.BoxGeometry(MM.portWidth - 2.6, 1.05, 0.9)),
     materials.slot
   )
-  tongue.position.set(0, -MM.height / 2 + 3.6, 0)
+  tongue.position.set(0, -MM.height / 2 + 3.1, 0)
   group.add(tongue)
 
   /* --- orientation ------------------------------------------------

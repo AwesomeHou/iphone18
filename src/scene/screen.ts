@@ -27,8 +27,8 @@ const CARD = {
      212 units of extra panel height, and the list has to grow into it:
      eighteen cards at the old pitch left a visibly empty strip above the
      home indicator. */
-  pitch: 364,
-  first: 2000,
+  pitch: 348,
+  first: 1980,
   r: 48,
 }
 
@@ -82,6 +82,7 @@ const NOTICES: Notice[] = [
   { app: '照片', color: '#ff2d55', glyph: 'flower', time: '15:50', title: '回忆', body: '「那部很长的手机」共 1 张' },
   { app: '播客', color: '#af52de', glyph: 'mic', time: '15:55', title: '新单集', body: '《为什么它这么长》第 1 集' },
   { app: '设置', color: '#8e8e93', glyph: 'find', time: '16:00', title: '完成设置', body: '还剩 4 项，其中 3 项需要两只手' },
+  { app: '超信', color: '#07c160', glyph: 'bubble', time: '16:04', title: '诺澜', body: '「我等你」等 7 条新消息' },
 ]
 
 /* --- primitives --------------------------------------------------- */
@@ -109,17 +110,35 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   return out + '…'
 }
 
-/* --- status bar glyphs -------------------------------------------- */
+/* --- status bar glyphs --------------------------------------------
+
+   iOS metrics, in points, converted through PT: the cellular indicator
+   is about 17.5 x 11.5 pt, wi-fi 17 x 11.5, the battery 27 x 12, and the
+   gaps between them are 8. The first version drew all three at roughly
+   half that, which is why they read as specks next to a 17 pt clock, and
+   it also stacked them on three different vertical centres: the bars grow
+   UP from their `y`, the wi-fi arcs hang BELOW it, and the battery is
+   centred ON it, so passing one shared `y` to all three put the battery
+   a good 15 units low. Everything below is placed by its optical centre.
+   ------------------------------------------------------------------ */
+
+/** Optical centre of the status bar row, measured down from the screen's top. */
+const STATUS_CY = 100
 
 function signalBars(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
   const heights = [0.38, 0.56, 0.76, 1]
   ctx.fillStyle = '#ffffff'
   for (let i = 0; i < 4; i++) {
     const h = s * heights[i]
-    rr(ctx, x + i * (s * 0.32), y - h, s * 0.2, h, s * 0.09)
+    rr(ctx, x + i * (s * 0.42), y - h, s * 0.26, h, s * 0.1)
     ctx.fill()
   }
 }
+
+/** Total width of a signalBars() call of size s. */
+const BARS_W = (s: number) => 3 * (s * 0.42) + s * 0.26
+/** Total height, i.e. the tall bar. */
+const BARS_H = (s: number) => s
 
 function wifi(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
   ctx.strokeStyle = '#ffffff'
@@ -137,6 +156,11 @@ function wifi(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
   ctx.fill()
 }
 
+/** Total width of a wifi() call of size s. */
+const WIFI_W = (s: number) => 2 * 0.73 * 0.98 * s
+/** Distance from the arc centre down to the optical centre. */
+const WIFI_DROP = (s: number) => 0.49 * s * 0.98
+
 function battery(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
   ctx.strokeStyle = 'rgba(255,255,255,0.55)'
   ctx.lineWidth = h * 0.09
@@ -149,6 +173,9 @@ function battery(ctx: CanvasRenderingContext2D, x: number, y: number, w: number,
   rr(ctx, x + h * 0.16, y - h / 2 + h * 0.16, (w - h * 0.32) * 0.87, h * 0.68, h * 0.2)
   ctx.fill()
 }
+
+/** Total width of a battery() call, nub included. */
+const BATTERY_W = (w: number, h: number) => w + h * 0.24
 
 /* --- app icon glyphs ---------------------------------------------- */
 
@@ -341,7 +368,7 @@ function appIcon(ctx: CanvasRenderingContext2D, color: string, kind: Glyph, x: n
   rr(ctx, x, y, size, size, size * 0.235)
   ctx.fillStyle = color
   ctx.fill()
-  glyph(ctx, kind, x + size / 2, y + size / 2, size * 0.52)
+  glyph(ctx, kind, x + size / 2, y + size / 2, size * 0.6)
 }
 
 /* --- wallpaper ----------------------------------------------------
@@ -424,16 +451,32 @@ function wallpaper(ctx: CanvasRenderingContext2D) {
 /* --- layers ------------------------------------------------------- */
 
 function statusBar(ctx: CanvasRenderingContext2D) {
+  const cy = STATUS_CY
+
   ctx.fillStyle = '#ffffff'
   ctx.font = `600 ${Math.round(17 * PT)}px ${FONT}`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillText('9:41', 140, 132)
+  // 17 pt semibold, sat on the row's optical centre rather than on a
+  // baseline that happened to look right on its own.
+  ctx.fillText('9:41', 140, cy + Math.round(17 * PT * 0.35))
 
-  const base = 128
-  battery(ctx, 1216, base, 56, 30)
-  wifi(ctx, 1140, base, 30)
-  signalBars(ctx, 1050, base, 34)
+  // Laid out from the right edge inward, so the trailing inset matches
+  // the 140 the clock has on the left.
+  const right = VW - 140
+  const gap = 8 * PT
+
+  const bw = 88
+  const bh = 44
+  const bx = right - BATTERY_W(bw, bh)
+  battery(ctx, bx, cy, bw, bh)
+
+  const ws = 42
+  wifi(ctx, bx - gap - WIFI_W(ws) / 2, cy + WIFI_DROP(ws), ws)
+
+  const bs = 42
+  const barsRight = bx - gap - WIFI_W(ws) - gap
+  signalBars(ctx, barsRight - BARS_W(bs), cy + BARS_H(bs) / 2, bs)
 }
 
 function lockGlyph(ctx: CanvasRenderingContext2D, cy: number) {
@@ -476,8 +519,8 @@ function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number) {
   ctx.lineWidth = 2
   ctx.stroke()
 
-  const icon = 139
-  appIcon(ctx, n.color, n.glyph, x + 40, top + 34, icon)
+  const icon = 146
+  appIcon(ctx, n.color, n.glyph, x + 40, top + 32, icon)
 
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
@@ -568,7 +611,7 @@ function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
   // intended luminance and the OLED read as frosted plastic. Contrast
   // around mid grey first throws the panel's own black away, so only the
   // text and the clock survive to be blurred.
-  const filter = `contrast(2.4) blur(${Math.max(2, Math.round(gw * 0.016))}px)`
+  const filter = `contrast(3) blur(${Math.max(2, Math.round(gw * 0.014))}px)`
   gc.filter = filter
   // Filters are not universally available; if the assignment did not take,
   // compositing the copy back would lift the whole panel instead of
@@ -582,7 +625,7 @@ function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
   // the text, so an additive halo adds almost nothing there and only the
   // highlights actually glow.
   ctx.globalCompositeOperation = 'lighter'
-  ctx.globalAlpha = 0.5
+  ctx.globalAlpha = 0.3
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(glow, 0, 0, w, h)
   ctx.restore()
