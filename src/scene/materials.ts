@@ -29,11 +29,15 @@ export function createMaterials(textures: {
   const { screen: screenTexture, logo: logoTexture } = textures
 
   const aluminum = new THREE.MeshPhysicalMaterial({
-    color: 0xdfe1e4,
+    // Near-white base, as measured off the sheet's hero render
+    // (#F6FAFB in the lit areas). At metalness 1 the colour IS the
+    // reflectance, so a grey here reads as a grey phone no matter how
+    // bright the environment gets.
+    color: 0xf0f2f4,
     metalness: 1,
-    roughness: 0.34,
-    clearcoat: 0.28,
-    clearcoatRoughness: 0.3,
+    roughness: 0.3,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.28,
     envMapIntensity: 1,
   })
 

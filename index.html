@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iPhone 18 · 长得漂亮。</title>
+    <meta
+      name="description"
+      content="iPhone 18。432 毫米的高度，72 毫米的宽度，7.8 毫米的厚度。更高的屏幕，更长的视野，一切你喜欢的，都装得下。"
+    />
+    <meta name="theme-color" content="#f5f5f7" />
+    <meta property="og:title" content="iPhone 18 · 长得漂亮。" />
+    <meta
+      property="og:description"
+      content="432 毫米。更高的屏幕，更长的视野。"
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <canvas id="stage" aria-hidden="true"></canvas>
+
+    <div class="poster" id="poster" hidden>
+      <img src="/poster.jpg" alt="iPhone 18 的正面，银白色铝金属机身，屏幕亮着锁屏。下半个机身延伸出画面之外。" onerror="this.remove()" />
+    </div>
+
+    <!-- The canvas is decorative. This is the accessible description of
+         the object it draws. -->
+    <p class="visually-hidden">
+      iPhone 18 的三维模型。机身高度 432 毫米，宽度 72 毫米，厚度 7.8 毫米，
+      银白色铝金属机身，正面是一块 16.4 英寸的超高屏幕，背面左上角有一颗摄像头和闪光灯，
+      底部有 USB-C 接口。页面滚动时，镜头沿机身自上而下移动。
+    </p>
+
+    <header class="globalnav">
+      <nav aria-label="全局导航">
+        <ul class="globalnav__list">
+          <li>
+            <a class="globalnav__mark" href="#top" aria-label="首页">
+              <svg width="14" height="17" viewBox="0 0 814 1000" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
+                />
+              </svg>
+            </a>
+          </li>
+          <li data-collapse><a href="#screen">商店</a></li>
+          <li data-collapse><a href="#screen">Mac</a></li>
+          <li data-collapse><a href="#screen">iPad</a></li>
+          <li><a href="#top">iPhone</a></li>
+          <li data-collapse><a href="#screen">Watch</a></li>
+          <li data-collapse><a href="#screen">Vision</a></li>
+          <li data-collapse><a href="#screen">AirPods</a></li>
+          <li data-collapse><a href="#screen">TV 与家庭</a></li>
+          <li data-collapse><a href="#screen">娱乐</a></li>
+          <li data-collapse><a href="#screen">配件</a></li>
+          <li data-collapse><a href="#specs">技术支持</a></li>
+          <li><a class="globalnav__buy" href="#buy">购买</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <div class="callouts" id="callouts" aria-hidden="true"></div>
+
+    <main id="top">
+      <!-- 0 · Hero ------------------------------------------------- -->
+      <section class="fold fold--light fold--hero" data-fold="0">
+        <div class="fold__inner">
+          <div class="copy" data-anchor="hero" data-reveal>
+            <p class="copy__product">iPhone 18</p>
+            <h1>长得漂亮。</h1>
+            <p class="copy__lead">多出来的高度，都给了你。</p>
+            <div class="cta-row">
+              <a class="btn btn--buy" href="#buy">购买</a>
+              <a class="btn btn--quiet link-arrow" href="#screen">进一步了解</a>
+            </div>
+          </div>
+        </div>
+        <div class="scroll-hint" aria-hidden="true">
+          <span>向下滚动</span>
+          <span class="scroll-hint__rail"></span>
+        </div>
+      </section>
+
+      <!-- 1 · 432 毫米 ---------------------------------------------- -->
+      <section class="fold fold--light fold--reveal" data-fold="1">
+        <div class="fold__inner">
+          <div class="copy" data-anchor="reveal" data-reveal>
+            <h2>432 毫米。</h2>
+            <p class="copy__lead">更高的屏幕，更长的视野，一切你喜欢的，都装得下。</p>
+            <p class="copy__body">
+              iPhone 18 重新构想了手机可以是什么。更高的屏幕，更长的视野，以及更多可以装下的东西。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 · 超高屏幕 ---------------------------------------------- -->
+      <section class="fold fold--dark fold--screen fold--low" data-fold="2" id="screen">
+        <div class="fold__inner">
+          <div class="copy" data-anchor="screen" data-reveal>
+            <h2>超高屏幕。</h2>
+            <p class="copy__lead">更多内容，一眼看完。</p>
+            <p class="copy__body">通知、日程、提醒事项，一屏装下。你不用滚动，因为它够高。</p>
+          </div>
+        </div>
+        <!-- This fold holds two camera keys. The copy anchors the later one;
+             this invisible marker anchors the earlier, which fires as the
+             lens reaches the top of the lock screen. -->
+        <span class="anchor-mark" data-anchor="screen-start" aria-hidden="true"></span>
+      </section>
+
+      <!-- 3 · 铝金属 ------------------------------------------------ -->
+      <section class="fold fold--dark fold--material fold--low" data-fold="3">
+        <div class="fold__inner">
+          <div class="copy" data-anchor="material" data-reveal>
+            <h2>铝金属。</h2>
+            <p class="copy__lead">精致。耐用。毫不费力。</p>
+            <p class="copy__body">
+              一体成型，阳极氧化处理。经过抛光的边缘把光线收成一条细线，从顶部一直延伸到底部。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 · 7.8 毫米 ---------------------------------------------- -->
+      <section class="fold fold--dark fold--edge fold--low" data-fold="4">
+        <div class="fold__inner">
+          <div class="copy" data-anchor="edge" data-reveal>
+            <h2>7.8 毫米。</h2>
+            <p class="copy__lead">长，但一点也不厚。</p>
+            <p class="copy__body">432 毫米的长度，7.8 毫米的厚度。侧过来看，它几乎只是一条线。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 · 细节之旅 ---------------------------------------------- -->
+      <section class="fold fold--dark fold--detail" data-fold="5">
+        <div class="fold__inner">
+          <div class="copy copy--detail" data-anchor="lens" data-reveal>
+            <h3>专注的相机。</h3>
+            <p class="copy__body">一颗镜头，一个闪光灯。该拍的，都拍得到。</p>
+          </div>
+          <div class="copy copy--detail" data-anchor="port" data-reveal>
+            <h3>USB-C。</h3>
+            <p class="copy__body">更长的连接。包装内附 2 米 USB-C 线缆。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 · 电池与简约 -------------------------------------------- -->
+      <section class="fold fold--light fold--duo" data-fold="6">
+        <div class="fold__inner">
+          <div class="duo" data-anchor="duo">
+            <div class="copy" data-reveal>
+              <h3>全天候电池。</h3>
+              <p class="copy__body">为了更长久的你。</p>
+            </div>
+            <div class="copy" data-reveal>
+              <h3>简约设计。</h3>
+              <p class="copy__body">你需要的，仅此而已。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 · 技术规格 ---------------------------------------------- -->
+      <section class="fold fold--light fold--specs" data-fold="7" id="specs">
+        <div class="fold__inner">
+          <div class="specs-body" data-anchor="specs">
+            <h2 class="specs__group">技术规格</h2>
+
+          <table class="specs">
+            <caption class="visually-hidden">iPhone 18 技术规格</caption>
+            <tbody>
+              <tr><th scope="row">高度</th><td>432 毫米</td></tr>
+              <tr><th scope="row">宽度</th><td>72 毫米</td></tr>
+              <tr><th scope="row">厚度</th><td>7.8 毫米</td></tr>
+              <tr><th scope="row">重量</th><td>412 克</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="specs__group">显示屏</h3>
+          <table class="specs">
+            <tbody>
+              <tr><th scope="row">类型</th><td>超视网膜 XDR 显示屏</td></tr>
+              <tr><th scope="row">尺寸</th><td>16.4 英寸（对角线）</td></tr>
+              <tr><th scope="row">分辨率</th><td>1086 × 7472 像素，460 ppi</td></tr>
+              <tr><th scope="row">峰值亮度</th><td>2000 尼特（户外）</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="specs__group">芯片与相机</h3>
+          <table class="specs">
+            <tbody>
+              <tr><th scope="row">芯片</th><td>A20 仿生芯片</td></tr>
+              <tr><th scope="row">主摄</th><td>4800 万像素</td></tr>
+              <tr><th scope="row">闪光灯</th><td>自适应原彩闪光灯</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="specs__group">电池与充电</h3>
+          <table class="specs">
+            <tbody>
+              <tr><th scope="row">视频播放</th><td>最长可达 41 小时</td></tr>
+              <tr><th scope="row">充电</th><td>USB-C，40W 快充</td></tr>
+              <tr><th scope="row">快充</th><td>约 30 分钟充至 50%</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="specs__group">包装内容</h3>
+          <table class="specs">
+            <tbody>
+              <tr><th scope="row">包装内容</th><td>iPhone 18</td></tr>
+              <tr><th scope="row"></th><td>USB-C 充电线（2 米）</td></tr>
+              <tr><th scope="row"></th><td>说明文档</td></tr>
+            </tbody>
+          </table>
+
+          <div class="footnotes">
+            <p>
+              * 屏幕对角线长度为 16.4 英寸。作为参考，16 英寸 MacBook Pro 的屏幕对角线为 16.2 英寸。
+            </p>
+            <p>
+              * 视频播放时间基于实验室条件。实际时间取决于使用方式，以及你把手机放在哪里。
+            </p>
+            <p>* 可放入部分裤袋。放入方式为斜放。建议先取出。</p>
+            <p>
+              * 感应器：面容 ID、气压计、三轴陀螺仪、加速度计、距离感应器、环境光传感器。
+              数量与 iPhone 17 完全相同。
+            </p>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 · 购买 -------------------------------------------------- -->
+      <section class="fold fold--dark fold--buy" data-fold="8" id="buy">
+        <div class="fold__inner">
+          <div class="copy copy--centered" data-anchor="buy" data-reveal>
+            <h2>更长的明天。</h2>
+            <p class="copy__lead">现在预订，明天发货。</p>
+            <p class="copy__body">RMB 9,999 起，或分 24 期，每期 RMB 416.63。</p>
+            <div class="cta-row cta-row--center">
+              <a class="btn btn--buy" href="#buy">购买</a>
+              <a class="btn btn--quiet link-arrow" href="#specs">加入比较</a>
+            </div>
+          </div>
+
+          <footer class="legal">
+            <p>
+              Copyright © 2026 Apple Inc. 保留所有权利。
+            </p>
+            <ul class="legal__links">
+              <li><a href="#buy">隐私政策</a></li>
+              <li><a href="#buy">使用条款</a></li>
+              <li><a href="#buy">销售与退款</a></li>
+              <li><a href="#buy">法律信息</a></li>
+              <li><a href="#buy">网站地图</a></li>
+            </ul>
+            <p class="legal__disclaimer">本页面为虚构概念设计，与 Apple Inc. 无关。</p>
+          </footer>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

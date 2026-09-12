@@ -2,9 +2,9 @@
    apple-style landing page for a 432 mm phone.
 
    Layout note: the WebGL stage is a fixed full-viewport layer at
-   --z-canvas. Every fold is a normal document-flow section that scrolls
-   over it, so copy placement and the camera framing are one decision
-   made in two places. The comments on .fold--* record the deal.
+   --z-canvas. Every fold is normal document flow scrolling over it, so
+   copy placement and camera framing are one decision made in two
+   places. The comment on each .fold--* records its half of the deal.
    ================================================================== */
 
 *,
@@ -18,10 +18,6 @@ html {
   scroll-behavior: smooth;
 }
 
-html.is-lenis {
-  scroll-behavior: auto;
-}
-
 body {
   margin: 0;
   background: var(--bg-light);
@@ -33,10 +29,6 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
-}
-
-body.is-locked {
-  overflow: hidden;
 }
 
 img {
@@ -67,12 +59,22 @@ a:hover {
   margin: -1px;
   padding: 0;
   overflow: hidden;
-  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
 }
 
-/* --- Stage ------------------------------------------------------- */
+/* --- Stage -------------------------------------------------------
+   Layer order is background -> product -> words:
+
+     .fold::before   z 0   the fold's own surface (light or black)
+     #stage          z 1   the phone
+     .fold__inner    z 2   the copy
+     .callouts       z 3   dimension lines
+
+   .fold must therefore NOT create a stacking context (no z-index of its
+   own), otherwise its background and its copy would be trapped on the
+   same layer and the copy would fall behind the canvas.
+   ------------------------------------------------------------------ */
 
 #stage {
   position: fixed;
@@ -80,7 +82,7 @@ a:hover {
   width: 100%;
   height: 100%;
   display: block;
-  z-index: var(--z-canvas);
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -88,15 +90,15 @@ a:hover {
   display: none;
 }
 
-/* Shown when WebGL is unavailable. Same copy, same layout, no canvas. */
 .poster {
   position: fixed;
   inset: 0;
-  z-index: var(--z-canvas);
+  z-index: 1;
   background: var(--bg-light);
   display: grid;
   place-items: center;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .poster[hidden] {
@@ -104,18 +106,19 @@ a:hover {
 }
 
 .poster img {
+  width: 100%;
   height: 100%;
-  width: auto;
-  object-fit: contain;
+  object-fit: cover;
+  /* Bias right so the phone stays in frame when the viewport is much
+     narrower than the poster's 8:5. */
+  object-position: 64% 50%;
 }
 
 /* --- Global nav -------------------------------------------------- */
 
 .globalnav {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset: 0 0 auto 0;
   height: var(--nav-h);
   z-index: var(--z-nav);
   background: rgba(22, 22, 23, 0.8);
@@ -131,7 +134,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-4);
+  gap: clamp(8px, 1.6vw, 24px);
   list-style: none;
 }
 
@@ -140,6 +143,7 @@ a:hover {
   font-size: var(--fs-micro);
   letter-spacing: 0.01em;
   white-space: nowrap;
+  transition: color var(--d-fast) var(--ease-out-quart);
 }
 
 .globalnav__list a:hover {
@@ -148,16 +152,16 @@ a:hover {
 }
 
 .globalnav__mark {
-  font-size: var(--fs-small);
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.92) !important;
 }
 
 .globalnav__buy {
   color: var(--accent) !important;
 }
 
-@media (max-width: 734px) {
+@media (max-width: 1000px) {
   .globalnav__list li[data-collapse] {
     display: none;
   }
@@ -167,11 +171,31 @@ a:hover {
 
 .fold {
   position: relative;
-  z-index: var(--z-content);
+  /* Deliberately no z-index: see the layer-order note above. */
   min-height: 100vh;
   display: flex;
   align-items: center;
   padding: var(--fold-pad) 0;
+}
+
+/* The fold's own surface. Sits under the canvas, so the phone reads
+   against the correct light or black ground in every section. The 1px
+   overhang stops a hairline of body background appearing between folds. */
+.fold::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -1px;
+  z-index: 0;
+  pointer-events: none;
+  background: transparent;
+}
+
+.fold--light::before {
+  background: var(--bg-light);
+}
+
+.fold--dark::before {
+  background: var(--bg-dark);
 }
 
 .fold--light {
@@ -182,19 +206,45 @@ a:hover {
   color: var(--on-dark);
 }
 
+/* Copy pushed to the bottom of the frame, product above it. */
+.fold--low {
+  align-items: flex-end;
+}
+
+.fold--low .copy {
+  max-width: 30rem;
+}
+
 .fold__inner {
+  position: relative;
+  z-index: 2;
   width: 100%;
   max-width: var(--shell);
   margin: 0 auto;
   padding: 0 var(--gutter);
 }
 
-/* Hero: copy in the left five columns, the phone stands in the right
-   half of the frame and bleeds off the top and bottom. The camera keys
-   in direction/keyframes.ts hold up the other half of that agreement. */
+/* Zero-size scroll marker used to anchor a second camera key inside a
+   fold that only has one copy block. */
+.anchor-mark {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Near the top of the screen fold's 200vh, which is where the earlier
+   of its two camera keys sits. */
+.fold--screen .anchor-mark {
+  top: 10%;
+}
+
+/* 0 Hero: copy in the left five columns; the phone stands to the right
+   and bleeds off the top and bottom. The camera key holds up the other
+   half of that agreement. */
 .fold--hero {
   min-height: 100svh;
-  align-items: center;
 }
 
 .fold--hero .fold__inner {
@@ -206,33 +256,81 @@ a:hover {
 
 .fold--hero .copy {
   grid-column: 1;
-  max-width: 22ch;
 }
 
-/* Reveal: the phone is a tall annotated sliver, centred and small. */
+/* CJK glyphs are a full em wide, so five of them plus the period set a
+   hard floor on this heading's size inside a five-column well. */
+.fold--hero .copy h1 {
+  font-size: clamp(2.25rem, 1.3rem + 3.4vw, 4rem);
+}
+
+/* 1 Reveal: copy left, the annotated sliver right, dimension lines
+   between them. 5/7 rather than 4/8 because the lead needs roughly
+   thirteen CJK glyphs per line to break well. */
 .fold--reveal .fold__inner {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   align-items: center;
-  text-align: center;
+  gap: var(--s-5);
 }
 
-/* Display: the screen fills the frame edge to edge, copy rides on top. */
-.fold--screen .fold__inner {
-  display: flex;
+.fold--reveal .copy {
+  grid-column: 1;
+}
+
+/* 2-4 Screen / material / edge: full-bleed product, copy riding low. */
+/* The screen fold carries the camera 260 mm down the display, so it
+   gets two screens of scroll to do it in. */
+.fold--screen {
+  min-height: 200vh;
+}
+
+.fold--material,
+.fold--edge {
+  min-height: 130vh;
+}
+
+/* 5 Detail: two 100vh rows in one fold, so the camera travels the whole
+   body inside a single continuous move and the copy swaps by scrolling
+   rather than by a scripted crossfade. Rows are bottom-aligned so each
+   copy sits under the macro rather than across it. */
+.fold--detail {
+  min-height: 200vh;
+  padding: 0;
+  align-items: stretch;
+}
+
+.fold--detail .fold__inner {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: end;
+  min-height: 200vh;
+  padding-top: calc(var(--nav-h) + var(--s-5));
+  padding-bottom: var(--s-6);
+}
+
+.copy--detail {
+  max-width: 22rem;
+}
+
+/* 6 Battery and simplicity: phone right, two stacked blocks left. */
+.fold--duo .fold__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: center;
+}
+
+.duo {
+  grid-column: 1;
+  display: grid;
+  gap: var(--s-6);
+}
+
+/* 7 Specs: 210vh with the tables in the lower block, which leaves the
+   upper third of the viewport empty for the phone to sit in. */
+.fold--specs {
+  min-height: 210vh;
   align-items: flex-end;
-  min-height: 70vh;
-}
-
-.fold--screen .copy {
-  max-width: 26ch;
-}
-
-.fold--side .fold__inner,
-.fold--port .fold__inner {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
 }
 
 .fold--specs .fold__inner {
@@ -241,11 +339,17 @@ a:hover {
   align-items: center;
 }
 
+/* 8 Buy */
+.fold--buy {
+  min-height: 120vh;
+}
+
 .fold--buy .fold__inner {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  gap: var(--s-7);
 }
 
 /* --- Copy -------------------------------------------------------- */
@@ -259,10 +363,12 @@ a:hover {
   font-weight: 600;
   letter-spacing: var(--track-h2);
   margin: 0;
+  color: var(--ink);
 }
 
 .copy h1,
-.copy h2 {
+.copy h2,
+.copy h3 {
   font-weight: 600;
   line-height: var(--lh-heading);
   margin: 0;
@@ -281,26 +387,24 @@ a:hover {
 
 .copy h3 {
   font-size: var(--fs-h3);
-  font-weight: 600;
   letter-spacing: var(--track-h2);
-  margin: 0;
-  text-wrap: balance;
 }
 
 .copy__lead {
   font-size: var(--fs-lead);
-  line-height: 1.3;
+  line-height: 1.32;
   letter-spacing: var(--track-h2);
   margin: 0;
+  text-wrap: pretty;
 }
 
 .copy__body {
   max-width: var(--measure);
   margin: 0;
+  text-wrap: pretty;
 }
 
-.fold--light .copy__body,
-.fold--light .copy__lead {
+.fold--light .copy__body {
   color: var(--ink-2);
 }
 
@@ -316,10 +420,14 @@ a:hover {
   color: var(--on-dark);
 }
 
+.fold--dark .copy h2,
+.fold--dark .copy h3 {
+  color: var(--on-dark);
+}
+
 .copy--centered {
   text-align: center;
-  max-width: 34ch;
-  margin: 0 auto;
+  max-width: 26rem;
 }
 
 .copy--centered .copy__body {
@@ -337,6 +445,10 @@ a:hover {
   margin-top: var(--s-5);
 }
 
+.cta-row--center {
+  justify-content: center;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -345,7 +457,7 @@ a:hover {
   font-size: var(--fs-body);
   border: 0;
   border-radius: var(--r-pill);
-  padding: 10px 20px;
+  padding: 11px 21px;
   cursor: pointer;
   transition: background-color var(--d-fast) var(--ease-out-quart);
 }
@@ -382,18 +494,24 @@ a:hover {
   left: 50%;
   bottom: clamp(16px, 4vh, 32px);
   transform: translateX(-50%);
-  font-size: var(--fs-micro);
-  color: var(--ink-3);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--s-1);
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+  opacity: 0;
+}
+
+body.is-ready .scroll-hint {
+  opacity: 1;
+  transition: opacity var(--d-slow) var(--ease-out-expo);
 }
 
 .scroll-hint__rail {
   width: 1px;
   height: 32px;
-  background: linear-gradient(to bottom, var(--ink-3), transparent);
+  background: linear-gradient(to bottom, #86868b, transparent);
 }
 
 /* --- Dimension callouts ------------------------------------------ */
@@ -401,12 +519,53 @@ a:hover {
 .callouts {
   position: fixed;
   inset: 0;
-  z-index: var(--z-overlay);
+  z-index: 3;
   pointer-events: none;
   overflow: hidden;
 }
 
 .callout {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--d-base) var(--ease-out-quart);
+}
+
+.callout[data-visible='true'] {
+  opacity: 1;
+}
+
+.callout__rule {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+  transform-origin: 0 0;
+  color: var(--ink-3);
+  will-change: transform, width;
+}
+
+.callout__rule::before,
+.callout__rule::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  width: 1px;
+  height: 11px;
+  background: currentColor;
+}
+
+.callout__rule::before {
+  left: 0;
+}
+
+.callout__rule::after {
+  right: 0;
+}
+
+.callout__label {
   position: absolute;
   top: 0;
   left: 0;
@@ -414,23 +573,8 @@ a:hover {
   letter-spacing: 0.01em;
   color: var(--ink-2);
   white-space: nowrap;
-  opacity: 0;
-  transition: opacity var(--d-base) var(--ease-out-quart);
+  transform-origin: 0 0;
   will-change: transform;
-}
-
-.callout[data-visible='true'] {
-  opacity: 1;
-}
-
-.callout--dark {
-  color: var(--on-dark-2);
-}
-
-.callout__rule {
-  position: absolute;
-  background: currentColor;
-  opacity: 0.5;
 }
 
 /* --- Spec table -------------------------------------------------- */
@@ -444,16 +588,18 @@ a:hover {
 
 .specs th,
 .specs td {
-  padding: var(--s-3) 0;
+  padding: 11px 0;
   border-bottom: 1px solid var(--hairline-light);
   font-weight: 400;
-  font-size: var(--fs-body);
+  font-size: 0.9375rem;
+  line-height: 1.4;
   vertical-align: baseline;
 }
 
 .specs th {
   color: var(--ink-2);
-  width: 45%;
+  width: 42%;
+  padding-right: var(--s-3);
 }
 
 .specs td {
@@ -465,28 +611,84 @@ a:hover {
   border-bottom: 0;
 }
 
-.fold--dark .specs th {
-  color: var(--on-dark-2);
-  border-color: var(--hairline-dark);
-}
-
-.fold--dark .specs td {
-  color: var(--on-dark);
-  border-color: var(--hairline-dark);
-}
-
 .specs__group {
-  margin-top: var(--s-6);
-  font-size: var(--fs-h3);
-  font-weight: 600;
-  letter-spacing: var(--track-h2);
+  margin: 0;
   text-align: center;
 }
 
-/* --- Reveal on scroll --------------------------------------------
-   Content is visible by default. `.is-revealing` is only ever added by
-   JS, and JS removes it as soon as the element is in view, so a headless
-   renderer or a background tab can never ship a blank section.
+h2.specs__group {
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  letter-spacing: var(--track-h2);
+  margin-bottom: var(--s-6);
+}
+
+h3.specs__group {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: var(--track-h2);
+  margin-top: var(--s-6);
+  margin-bottom: var(--s-2);
+}
+
+.footnotes {
+  width: min(640px, 100%);
+  margin: var(--s-6) auto 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--hairline-light);
+}
+
+.footnotes p {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* --- Legal ------------------------------------------------------- */
+
+.legal {
+  max-width: 40rem;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--on-dark-2);
+  text-align: left;
+}
+
+.legal p {
+  margin: 0 0 var(--s-2);
+}
+
+.legal__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  list-style: none;
+  margin: var(--s-3) 0;
+  padding: 0;
+}
+
+.legal__links a {
+  color: var(--on-dark-2);
+  border-right: 1px solid var(--hairline-dark);
+  padding-right: var(--s-3);
+}
+
+.legal__links li:last-child a {
+  border-right: 0;
+  padding-right: 0;
+}
+
+.legal__disclaimer {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--hairline-dark);
+}
+
+/* --- Reveal on scroll ---------------------------------------------
+   Visible by default. `.is-revealing` is only ever added by JS, which
+   also removes it again, so a headless render or a background tab can
+   never ship a blank section.
    ------------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -498,60 +700,95 @@ a:hover {
   .is-revealing.is-revealed {
     opacity: 1;
     transform: none;
-    transition: opacity var(--d-slow) var(--ease-out-expo),
+    transition:
+      opacity var(--d-slow) var(--ease-out-expo),
       transform var(--d-slow) var(--ease-out-expo);
   }
 }
 
 /* --- Responsive -------------------------------------------------- */
 
-@media (max-width: 900px) {
-  .fold--hero .fold__inner {
+@media (max-width: 1000px) {
+  .fold--hero .fold__inner,
+  .fold--reveal .fold__inner,
+  .fold--duo .fold__inner {
     grid-template-columns: 1fr;
     align-items: flex-start;
+    gap: var(--s-5);
     padding-top: calc(var(--nav-h) + var(--s-5));
   }
 
-  .fold--hero .copy {
-    max-width: 18ch;
+  .fold--hero .copy,
+  .fold--reveal .copy,
+  .duo {
+    grid-column: 1;
   }
 
-  .fold--hero {
-    align-items: flex-start;
+  /* Single column means the phone and the copy want the same space, and
+     neither #1d1d1f on bright aluminium nor #f5f5f7 on it is a reliable
+     4.5:1 pair. Rather than a scrim per fold, each copy block carries a
+     full-bleed spotlight of its own ground: it follows the words wherever
+     they sit, and it works the same for a fold whose copy is at the top
+     as for one whose copy is at the bottom.
+
+     It has to hang off the COPY, not off .fold__inner. The inner box is
+     only as tall as its content, so a gradient sized to it ends exactly
+     where the last line does and the phone shows straight through the
+     text underneath.
+
+     The specs fold needs no scrim: its content is a table, not a .copy. */
+  .fold .copy {
+    position: relative;
+    z-index: 4;
   }
 
-  /* Copy needs to stay legible where the phone sits behind it. */
-  .fold--hero .fold__inner::before,
-  .fold--screen .fold__inner::before {
+  .fold .copy::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(245, 245, 247, 0.92) 0%,
-      rgba(245, 245, 247, 0.7) 45%,
-      rgba(245, 245, 247, 0) 100%
-    );
+    left: 50%;
+    top: -22%;
+    width: 100vw;
+    height: 144%;
+    transform: translateX(-50%);
     z-index: -1;
     pointer-events: none;
   }
 
-  .fold--screen .fold__inner::before {
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.86) 0%,
-      rgba(0, 0, 0, 0.5) 55%,
+  .fold--light .copy::before {
+    background: radial-gradient(
+      ellipse 92% 52% at 50% 50%,
+      rgba(245, 245, 247, 1) 0%,
+      rgba(245, 245, 247, 0.96) 58%,
+      rgba(245, 245, 247, 0) 100%
+    );
+  }
+
+  .fold--dark .copy::before {
+    background: radial-gradient(
+      ellipse 92% 52% at 50% 50%,
+      rgba(0, 0, 0, 0.97) 0%,
+      rgba(0, 0, 0, 0.92) 58%,
       rgba(0, 0, 0, 0) 100%
     );
   }
 
-  .fold--screen .copy {
+  .fold--detail .fold__inner {
+    padding-top: calc(var(--nav-h) + var(--s-5));
+    padding-bottom: var(--s-6);
+  }
+
+  .copy--detail,
+  .fold--low .copy {
     max-width: 100%;
   }
 }
 
 @media (max-width: 600px) {
   .specs th {
-    width: 52%;
+    width: 50%;
+  }
+
+  .duo {
+    gap: var(--s-5);
   }
 }
