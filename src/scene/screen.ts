@@ -535,9 +535,60 @@ function bottomControls(ctx: CanvasRenderingContext2D) {
   ctx.fill()
 }
 
+/**
+ * Bake the bloom into the panel.
+ *
+ * A real display bleeds light: the white clock on a black OLED has a
+ * visible halo, and its absence is a large part of why a rendered screen
+ * reads as a picture of a screen. A post-process bloom pass would cost
+ * several full-screen passes on a page whose entire budget is already
+ * spent on the phone, so the halo is drawn into the texture instead,
+ * where it is free at runtime and costs one blur at boot.
+ *
+ * The blur runs at a quarter resolution. A halo is by definition
+ * low-frequency, and blurring 6 megapixels to get one is a boot cost
+ * with nothing to show for it.
+ */
+function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+  const w = canvas.width
+  const h = canvas.height
+  const gw = Math.max(64, Math.round(w / 4))
+  const gh = Math.max(64, Math.round(h / 4))
+
+  const glow = document.createElement('canvas')
+  glow.width = gw
+  glow.height = gh
+  const gc = glow.getContext('2d')
+  if (!gc) return
+  // A high-pass, then a blur, in that order. Blurring first and then
+  // adding the result back lifts the whole panel, which is the opposite
+  // of what a halo is: the wallpaper came out at nearly twice its
+  // intended luminance and the OLED read as frosted plastic. Contrast
+  // around mid grey first throws the panel's own black away, so only the
+  // text and the clock survive to be blurred.
+  const filter = `contrast(2.4) blur(${Math.max(2, Math.round(gw * 0.016))}px)`
+  gc.filter = filter
+  // Filters are not universally available; if the assignment did not take,
+  // compositing the copy back would lift the whole panel instead of
+  // blooming its highlights, so do nothing at all.
+  if (gc.filter !== filter) return
+  gc.drawImage(canvas, 0, 0, w, h, 0, 0, gw, gh)
+
+  ctx.save()
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  // `lighter` rather than `screen`: the panel is almost black away from
+  // the text, so an additive halo adds almost nothing there and only the
+  // highlights actually glow.
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.globalAlpha = 0.5
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(glow, 0, 0, w, h)
+  ctx.restore()
+}
+
 /* --- entry point -------------------------------------------------- */
 
-export function createScreenCanvas(targetWidth: number): HTMLCanvasElement {
+export function createScreenCanvas(targetWidth: number, bloom = true): HTMLCanvasElement {
   const scale = targetWidth / VW
   const canvas = document.createElement('canvas')
   canvas.width = targetWidth
@@ -554,6 +605,8 @@ export function createScreenCanvas(targetWidth: number): HTMLCanvasElement {
   clockAndDate(ctx)
   NOTICES.forEach((n, i) => notification(ctx, n, CARD.first + i * CARD.pitch))
   bottomControls(ctx)
+
+  if (bloom) addDisplayBloom(canvas, ctx)
 
   return canvas
 }

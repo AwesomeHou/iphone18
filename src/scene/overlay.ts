@@ -61,14 +61,17 @@ interface Entry {
   el: HTMLElement
   rule: HTMLElement
   label: HTMLElement
-  host: HTMLElement | null
   /** Cached label width, measured off the critical path. */
   labelW: number
+  /** Cached document offset of the governing anchor. See note below. */
+  hostTop: number
+  hostHeight: number
 }
 
 export interface Overlay {
   update(camera: THREE.Camera): void
   resize(): void
+  measure(): void
   dispose(): void
 }
 
@@ -89,25 +92,45 @@ export function createOverlay(
     label.textContent = dim.label
     el.append(rule, label)
     root.append(el)
+    const host = anchors.get(dim.anchor) ?? null
     return {
       dim,
       el,
       rule,
       label,
-      host: anchors.get(dim.anchor) ?? null,
       labelW: 0,
+      hostTop: host ? host.getBoundingClientRect().top + window.scrollY : 0,
+      hostHeight: host ? host.offsetHeight : 0,
     }
   })
 
   let w = window.innerWidth
   let h = window.innerHeight
 
-  /** Reading offsetWidth forces layout, so it happens here and never
-      inside the frame loop. */
-  const measureLabels = () => {
-    for (const e of entries) e.labelW = e.label.offsetWidth
+  /**
+   * All layout reads happen here, never in the frame loop.
+   *
+   * Reading getBoundingClientRect and then writing style.transform in the
+   * same frame is a forced synchronous layout: the write invalidates the
+   * layout tree and the next read has to rebuild it. Doing that three
+   * times per frame during a scroll is the jank this replaces. The
+   * anchors only move when the document reflows, so their offsets are
+   * cached and the on-screen position is derived from scrollY, which is
+   * free.
+   */
+  const measure = () => {
+    const scrollY = window.scrollY
+    for (const e of entries) {
+      e.labelW = e.label.offsetWidth
+      const host = anchors.get(e.dim.anchor)
+      if (host) {
+        const r = host.getBoundingClientRect()
+        e.hostTop = r.top + scrollY
+        e.hostHeight = r.height
+      }
+    }
   }
-  measureLabels()
+  measure()
 
   const project = (
     camera: THREE.Camera,
@@ -125,13 +148,12 @@ export function createOverlay(
 
   return {
     update(camera) {
+      const scrollY = window.scrollY
       for (const e of entries) {
-        // Visible while its anchor owns the middle of the viewport.
-        let active = false
-        if (e.host) {
-          const r = e.host.getBoundingClientRect()
-          active = r.top <= h * 0.5 && r.bottom >= h * 0.5
-        }
+        // Visible while its anchor owns the middle of the viewport. Pure
+        // arithmetic: no layout read anywhere in this loop.
+        const top = e.hostTop - scrollY
+        const active = top <= h * 0.5 && top + e.hostHeight >= h * 0.5
         e.el.dataset.visible = active ? 'true' : 'false'
         if (!active) continue
 
@@ -149,6 +171,9 @@ export function createOverlay(
         const len = Math.hypot(dx, dy)
         const angle = (Math.atan2(dy, dx) * 180) / Math.PI
 
+        // width, not scaleX: scaleX would stretch the 1px end ticks that
+        // the rule draws with ::before and ::after. Writing width is fine
+        // now that nothing in this loop reads layout back.
         e.rule.style.transform = `translate(${pa.x}px, ${pa.y}px) rotate(${angle}deg)`
         e.rule.style.width = `${len}px`
 
@@ -167,8 +192,11 @@ export function createOverlay(
     resize() {
       w = window.innerWidth
       h = window.innerHeight
-      measureLabels()
+      measure()
     },
+
+    /** Call after anything that reflows the document. */
+    measure,
 
     dispose() {
       for (const e of entries) e.el.remove()

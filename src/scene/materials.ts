@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { LogoTexture } from './textures'
 
 export interface PhoneMaterials {
   /** ZONE.frontFace: painted bezel under cover glass. */
@@ -44,9 +45,10 @@ export interface PhoneMaterials {
  */
 export function createMaterials(textures: {
   screen: THREE.Texture | null
-  logo: THREE.Texture | null
+  logo: LogoTexture | null
 }): PhoneMaterials {
-  const { screen: screenTexture, logo: logoTexture } = textures
+  const { screen: screenTexture } = textures
+  const logoTexture = textures.logo?.texture ?? null
 
   const bodyFront = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
@@ -118,29 +120,43 @@ export function createMaterials(textures: {
   const coverGlass = new THREE.MeshPhysicalMaterial({
     color: 0x000000,
     metalness: 0,
-    roughness: 0.015,
+    roughness: 0.03,
     clearcoat: 1,
-    clearcoatRoughness: 0.02,
-    envMapIntensity: 2.1,
+    clearcoatRoughness: 0.03,
+    envMapIntensity: 1.9,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   })
 
   const lens = new THREE.MeshPhysicalMaterial({
-    color: 0x0a0c12,
-    metalness: 0.5,
-    roughness: 0.03,
+    color: 0x0b1018,
+    metalness: 0.15,
+    // A mirror finish here reflects the studio's softbox edges as a hard
+    // crescent across the glass, which reads as a sphere rather than a
+    // lens. A little roughness spreads that into a believable sheen.
+    // Rougher than glass, deliberately. The studio has a hard horizon
+    // and a flat lens mirrors it as a straight line across the disc,
+    // which reads as a sphere cut in half rather than as an optic. A
+    // wider specular lobe turns that line into the soft sheen a real
+    // lens cover has, and the AR coating below supplies the character
+    // the roughness takes away.
+    roughness: 0.17,
     clearcoat: 1,
-    clearcoatRoughness: 0.01,
-    envMapIntensity: 2,
+    clearcoatRoughness: 0.07,
+    envMapIntensity: 0.7,
+    // The anti-reflective coating every camera lens wears: a faint
+    // violet-green sheen that only appears where the light grazes.
+    iridescence: 0.5,
+    iridescenceIOR: 1.3,
+    iridescenceThicknessRange: [180, 460],
   })
 
   const lensRing = new THREE.MeshPhysicalMaterial({
-    color: 0xcfd2d6,
+    color: 0x9ea3a9,
     metalness: 1,
-    roughness: 0.16,
-    envMapIntensity: 1.2,
+    roughness: 0.2,
+    envMapIntensity: 1.1,
   })
 
   const flash = new THREE.MeshPhysicalMaterial({
@@ -175,10 +191,10 @@ export function createMaterials(textures: {
       above the body beside it, so it is a bright ceramic band rather
       than a slightly lighter aluminium. */
   const antenna = new THREE.MeshStandardMaterial({
-    color: 0xfcfcfb,
-    metalness: 0.35,
-    roughness: 0.4,
-    envMapIntensity: 1.35,
+    color: 0xffffff,
+    metalness: 0.12,
+    roughness: 0.5,
+    envMapIntensity: 1.6,
   })
 
   /**

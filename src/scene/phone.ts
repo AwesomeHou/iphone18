@@ -9,6 +9,7 @@ import {
 import { carveBody } from './recess'
 import type { PhoneMaterials } from './materials'
 import { createMaterials } from './materials'
+import type { LogoTexture } from './textures'
 
 export interface Phone {
   group: THREE.Group
@@ -79,7 +80,7 @@ function backFacing(geo: THREE.BufferGeometry, x: number, y: number, depth: numb
 
 export function createPhone(textures: {
   screen: THREE.Texture | null
-  logo: THREE.Texture | null
+  logo: LogoTexture | null
 }): Phone {
   const materials = createMaterials(textures)
   const group = new THREE.Group()
@@ -176,7 +177,12 @@ export function createPhone(textures: {
   // Punch the camera pockets out of the cap, in the cap's own frame.
   for (const p of carved.capPockets) {
     const hole = new THREE.Path()
-    hole.absarc(p.x, p.y - capBaseY, p.r, 0, Math.PI * 2, true)
+    // NEGATIVE x. The cap mesh is turned 180 degrees about Y so its front
+    // faces the back viewer, and that mirrors the geometry: local +X ends
+    // up at world -X. Punching the holes at +x put them 49.6 mm away from
+    // the lens and flash they are supposed to expose, which rendered as
+    // two extra circles sitting on the far side of the band.
+    hole.absarc(-p.x, p.y - capBaseY, p.r, 0, Math.PI * 2, true)
     cap.holes.push(hole)
   }
   const capGeo = track(new THREE.ShapeGeometry(cap, 32))
@@ -192,13 +198,22 @@ export function createPhone(textures: {
   const lensDome = track(
     new THREE.SphereGeometry(MM.lensRadius, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2)
   )
-  lensDome.scale(1, 1, 0.42)
+  // SphereGeometry measures theta from +Y, so `thetaLength: PI / 2` is the
+  // UPPER hemisphere: a half-disc standing on its edge, poled along Y.
+  // Back-facing it showed the top half of a circle and let the machined
+  // back show through the bottom half of the pocket as a bright crescent,
+  // which is what made the lens read as a split marble. Turn the pole to
+  // face the viewer, then flatten it: real cover glass is nearly flat, and
+  // a shallow dome is what gives a lens one soft highlight instead of a
+  // reflection of the whole room.
+  lensDome.rotateX(Math.PI / 2)
+  lensDome.scale(1, 1, 0.16)
   const lens = backFacing(lensDome, fromBackLeft(MM.lensFromLeft), fromTop(MM.rearFromTop), BACK.lens)
   lens.material = materials.lens
   group.add(lens)
 
   const lensRing = backFacing(
-    track(new THREE.RingGeometry(MM.lensRadius, MM.lensRadius + 0.45, 64)),
+    track(new THREE.RingGeometry(MM.lensRadius, MM.lensRadius + 0.22, 64)),
     fromBackLeft(MM.lensFromLeft),
     fromTop(MM.rearFromTop),
     BACK.ring
@@ -216,7 +231,8 @@ export function createPhone(textures: {
   group.add(flash)
 
   if (textures.logo) {
-    const logoH = (MM.logoWidth * 1000) / 814
+    // The plane takes the INK's measured aspect, not an assumed 814:1000.
+    const logoH = MM.logoWidth * textures.logo.aspect
     const logo = backFacing(
       track(new THREE.PlaneGeometry(MM.logoWidth, logoH)),
       0,

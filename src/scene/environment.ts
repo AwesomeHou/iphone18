@@ -123,7 +123,15 @@ export function createStudioEquirect(): THREE.CanvasTexture {
      surface. */
   softRect(ctx, 0.60, 0.94, 0.34, 0.43, '#ffffff', 8)
   softRect(ctx, 0.60, 0.94, 0.44, 0.53, '#2f2f32', 8)
-  softRect(ctx, 0.62, 0.92, 0.56, 0.62, '#95948f', 12)
+  softRect(ctx, 0.62, 0.92, 0.56, 0.62, '#6f6e6a', 12)
+  // A screen faces the viewer and the camera sits above it, so the glass
+  // mirrors DOWN, into canvas rows just past the horizon: this strip is
+  // what a head-on view of the display reflects. It wants a visible edge
+  // rather than a gradient, because glass is identified by the shape it
+  // reflects, but it must stay close to the panel's own luminance: a
+  // full-strength white strip here washes the black of the display out to
+  // a pale grey and the OLED reads as frosted plastic.
+  softRect(ctx, 0.63, 0.89, 0.53, 0.585, '#a9a7a3', 4)
 
   /* --- ceiling ------------------------------------------------------- */
   softRect(ctx, 0.0, 1.0, 0.0, 0.05, '#ffffff', 18)

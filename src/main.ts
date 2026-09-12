@@ -83,6 +83,15 @@ function boot(): void {
       else stage.start(loop)
     })
 
+    if (import.meta.env.DEV) {
+      ;(window as unknown as Record<string, unknown>).__dsh = {
+        camera: stage.camera,
+        scroll,
+        keys: resolveKeys(anchors),
+        rig,
+      }
+    }
+
     // Compose one frame synchronously so the hero is framed before the
     // phone is faded in, rather than showing an unframed first frame.
     rig(0, 0, scroll.isReduced)

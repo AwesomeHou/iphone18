@@ -53,9 +53,14 @@ export const MM = {
   bezelSide: 3.73, // 7/135 of the width
   bezelTop: 21.04, // 28/575 of the height
   bezelBottom: 20.29, // 27/575 of the height
-  /** The sheet's display meets the bezel at a right angle. Kept at a
-      hairline radius only so the silhouette does not alias into a knife. */
-  screenRadius: 2,
+  /** The sheet draws a square-cornered panel, but nothing shipping looks
+      like that: a real display's corners are concentric with the cover
+      glass and clearly round. Kept here as a deliberate departure from
+      the sheet, because the square version is a large part of why the
+      front read as a mock-up. Concentric with the flat face would be
+      8.5 - 1.23; 7 is a shade tighter and reads correctly at every
+      camera distance. */
+  screenRadius: 7,
 
   /** Earpiece slot. Note it sits BELOW the camera dot in the sheet. */
   earpieceWidth: 11.7, // 22/135
@@ -76,7 +81,7 @@ export const MM = {
   capFromTop: 19.12, // 25.5/576
 
   /** Etched logo, high on the back rather than centred. */
-  logoWidth: 14.18, // 26/132
+  logoWidth: 17.6, // 26/132 of the width, scaled up: at 14.18 the mark
   logoFromTop: 54.0, // 72/576
 
   /** Right-side button. 46/578 of the height and long, as drawn. */

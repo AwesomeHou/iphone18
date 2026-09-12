@@ -18,6 +18,15 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Lenis is driving the scroll from JavaScript, and it does so by calling
+   scrollTo on every frame. With CSS smooth scrolling still in force each
+   of those calls starts its own animation, so the two fight and the page
+   stutters. Hand the scroll back to the browser only when Lenis is not
+   running, which is also the reduced-motion path and the no-JS path. */
+html.is-lenis {
+  scroll-behavior: auto;
+}
+
 body {
   margin: 0;
   background: var(--bg-light);
