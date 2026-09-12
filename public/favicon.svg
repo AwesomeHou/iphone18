@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>爱疯18</title>
+  <!-- The phone on its own, no tile behind it. The product's whole joke is
+       that it is 6:1, and at 16 px a literal 6:1 slab is a 2 px hairline
+       that reads as a rendering artefact; this is drawn at about 4.5:1,
+       which still says "absurdly long" and survives the downscale.
+
+       The body carries a hairline outline because without the tile it has
+       to hold up on a white tab bar as well as a dark one, and a silver
+       rectangle on white is invisible. -->
+  <rect x="25.5" y="3" width="13" height="58" rx="3.9" fill="#f4f4f2" stroke="#9a9a97" stroke-width="1.1" />
+  <rect x="27.4" y="6.2" width="9.2" height="51.6" rx="2.6" fill="#0a0c12" />
+  <circle cx="32" cy="9.7" r="0.95" fill="#1b1d22" />
+  <rect x="30.3" y="55.4" width="3.4" height="0.9" rx="0.45" fill="#c2c2bf" />
+</svg>

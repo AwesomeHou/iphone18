@@ -23,14 +23,22 @@ const CARD = {
   x: 90,
   w: 1260,
   h: 330,
-  /* 364, not 352. The bezels came in by 9.5 mm between them, which is
-     212 units of extra panel height, and the list has to grow into it:
-     eighteen cards at the old pitch left a visibly empty strip above the
-     home indicator. */
-  pitch: 364,
+  /**
+   * Vertical gap between cards, not a fixed pitch. Cards are as tall as
+   * their body needs: a notification body that does not fit on one line
+   * wraps to a second, exactly as iOS does, and the list below it moves
+   * down. A fixed pitch plus a truncating body would silently eat the
+   * text, which is what it did to the wallet notification.
+   */
+  gap: 52,
   first: 1980,
   r: 48,
 }
+
+/** Line height for a wrapped body. 76 units = 20.7 pt. */
+const BODY_LINE = 76
+/** How many body lines a card will show before it truncates. */
+const BODY_LINES = 2
 
 interface Notice {
   app: string
@@ -68,20 +76,19 @@ const NOTICES: Notice[] = [
 
   { app: '提醒事项', color: '#ff9500', glyph: 'check', time: '15:02', title: '「把 iPhone 18 放进裤袋」', body: '测试结果：失败' },
   { app: '健康', color: '#ff2d55', glyph: 'heart', time: '15:04', title: '今日步数 0 步', body: '你一直站在原地找手机的上半部分' },
-  { app: '相机', color: '#8e8e93', glyph: 'cam', time: '15:05', title: '已识别', body: '一根 432 毫米的金属棒' },
   { app: '电池', color: '#34c759', glyph: 'bolt', time: '15:08', title: '电量 87%', body: '预计可用 41 小时' },
   { app: '天气', color: '#007aff', glyph: 'sun', time: '15:10', title: '今日晴', body: '手机上方 20 厘米处有云' },
-  { app: '钱包', color: '#1c1c1e', glyph: 'card', time: '15:12', title: '最近交易', body: '「裤袋扩容服务」RMB 199' },
-  { app: '地图', color: '#007aff', glyph: 'pin', time: '15:15', title: '前方 400 米直行', body: '你还在看屏幕底部' },
-  { app: '音乐', color: '#ff3b30', glyph: 'play', time: '15:18', title: '正在播放', body: '《再长一点》' },
-  { app: '邮件', color: '#007aff', glyph: 'mail', time: '15:22', title: '未读 1 封', body: '主题：关于你的设备高度' },
-  { app: 'App Store', color: '#007aff', glyph: 'bag', time: '15:25', title: '今日推荐', body: '适合更高屏幕的应用' },
+  { app: '钱包', color: '#1c1c1e', glyph: 'card', time: '15:12', title: '最近交易', body: '《飞跃创界山（开天辟地之裂变的大地）》桌游 RMB 321' },
+  { app: '地图', color: '#007aff', glyph: 'pin', time: '15:15', title: '前方 400 米直行', body: '文化佳园' },
+  { app: '音乐', color: '#ff3b30', glyph: 'play', time: '15:18', title: '正在播放', body: '《爱情公寓》' },
+  { app: '邮件', color: '#007aff', glyph: 'mail', time: '15:22', title: '未读 1 封', body: '发信人：拒绝者' },
+  { app: 'App Store', color: '#007aff', glyph: 'bag', time: '15:25', title: '今日推荐', body: '小龙虾' },
   { app: '家庭', color: '#ff9500', glyph: 'house', time: '15:30', title: '客厅的灯已关闭', body: '下午 3:30' },
-  { app: '备忘录', color: '#ffcc00', glyph: 'note', time: '15:33', title: '新备忘录', body: '「别买」' },
+  { app: '备忘录', color: '#ffcc00', glyph: 'note', time: '15:33', title: '新备忘录', body: '请记住，天使与你同在，你本来就很美' },
   { app: '屏幕使用时间', color: '#5856d6', glyph: 'chart', time: '15:40', title: '本周日均 4 小时 12 分', body: '较上周持平' },
   { app: '日历', color: '#ff3b30', glyph: 'cal', time: '15:45', title: '今天 15:00', body: '「与裤袋的会议」已取消' },
-  { app: '照片', color: '#ff2d55', glyph: 'flower', time: '15:50', title: '回忆', body: '「那部很长的手机」共 1 张' },
-  { app: '播客', color: '#af52de', glyph: 'mic', time: '15:55', title: '新单集', body: '《为什么它这么长》第 1 集' },
+  { app: '照片', color: '#ff2d55', glyph: 'flower', time: '15:50', title: '回忆', body: '一起去看流星雨' },
+  { app: '播客', color: '#af52de', glyph: 'mic', time: '15:55', title: '新单集', body: '《决战紫禁之巅》' },
   { app: '设置', color: '#8e8e93', glyph: 'find', time: '16:00', title: '完成设置', body: '还剩 4 项，其中 3 项需要两只手' },
 ]
 
@@ -108,6 +115,71 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   let out = text
   while (out.length > 1 && ctx.measureText(out + '…').width > max) out = out.slice(0, -1)
   return out + '…'
+}
+
+/** Characters that may not start a line in Chinese typesetting. */
+const NO_LINE_START = '，。、；：！？）］｝〉》」』】…％℃'
+/** Characters that may not end one. */
+const NO_LINE_END = '（［｛〈《「『【'
+
+/**
+ * Wrap to at most `maxLines` lines.
+ *
+ * Character by character rather than by word: Chinese has no spaces, so
+ * there is nothing else to break on. The two punctuation sets are the
+ * real rule from Chinese typesetting and they earn their keep here — the
+ * wallet body wraps around 《…（…）》 and without them the line break lands
+ * between the 》 and the 桌 rather than in a place a reader accepts.
+ *
+ * A short last line is rebalanced against the one above it. Sixteen
+ * characters and then a lone 美 on the second line is technically correct
+ * wrapping and looks like a bug.
+ */
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  max: number,
+  maxLines: number
+): string[] {
+  const lines: string[] = []
+  let line = ''
+  for (const ch of text) {
+    if (line && ctx.measureText(line + ch).width > max) {
+      if (NO_LINE_START.includes(ch) && line.length > 1) {
+        lines.push(line + ch)
+        line = ''
+        continue
+      }
+      if (NO_LINE_END.includes(line[line.length - 1]) && line.length > 1) {
+        lines.push(line.slice(0, -1))
+        line = line[line.length - 1] + ch
+        continue
+      }
+      lines.push(line)
+      line = ch
+    } else {
+      line += ch
+    }
+  }
+  if (line) lines.push(line)
+
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines)
+    const rest = lines.slice(maxLines).join('')
+    kept[maxLines - 1] = fit(ctx, kept[maxLines - 1] + rest, max)
+    return kept
+  }
+
+  while (
+    lines.length > 1 &&
+    lines[lines.length - 1].length < 4 &&
+    lines[lines.length - 2].length > 6
+  ) {
+    const prev = lines[lines.length - 2]
+    lines[lines.length - 1] = prev.slice(-1) + lines[lines.length - 1]
+    lines[lines.length - 2] = prev.slice(0, -1)
+  }
+  return lines
 }
 
 /* --- status bar glyphs --------------------------------------------
@@ -578,38 +650,53 @@ function clockAndDate(ctx: CanvasRenderingContext2D) {
  * first line, so it sits between the two lines the way the reference
  * does.
  */
-function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number) {
+function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number): number {
   const { x, w, h, r } = CARD
-  rr(ctx, x, top, w, h, r)
+
+  const icon = 146
+  const pad = 40
+  const textX = x + pad + icon + 30
+  const bodyMax = x + w - pad - textX
+  const bodyFont = `400 ${Math.round(17 * PT)}px ${FONT}`
+  const titleFont = `600 ${Math.round(17 * PT)}px ${FONT}`
+  const timeFont = `400 ${Math.round(13 * PT)}px ${FONT}`
+
+  // Measure before drawing: the card's height depends on how many lines
+  // the body needs, and the icon centres on that height.
+  ctx.textBaseline = 'alphabetic'
+  ctx.font = bodyFont
+  const lines = wrapText(ctx, n.body, bodyMax, BODY_LINES)
+  const cardH = h + (lines.length - 1) * BODY_LINE
+
+  rr(ctx, x, top, w, cardH, r)
   ctx.fillStyle = 'rgba(255,255,255,0.10)'
   ctx.fill()
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'
   ctx.lineWidth = 2
   ctx.stroke()
 
-  const icon = 146
-  const pad = 40
-  appIcon(ctx, n.color, n.glyph, x + pad, top + (h - icon) / 2, icon)
-
-  const textX = x + pad + icon + 30
-  ctx.textBaseline = 'alphabetic'
+  appIcon(ctx, n.color, n.glyph, x + pad, top + (cardH - icon) / 2, icon)
 
   // The timestamp is placed first so the title can be truncated to what is
   // actually left for it, rather than to a guess.
   ctx.textAlign = 'right'
   ctx.fillStyle = 'rgba(255,255,255,0.52)'
-  ctx.font = `400 ${Math.round(13 * PT)}px ${FONT}`
+  ctx.font = timeFont
   ctx.fillText(n.time, x + w - pad, top + 148)
   const timeW = ctx.measureText(n.time).width
 
   ctx.textAlign = 'left'
   ctx.fillStyle = '#ffffff'
-  ctx.font = `600 ${Math.round(17 * PT)}px ${FONT}`
+  ctx.font = titleFont
   ctx.fillText(fit(ctx, n.title, x + w - pad - timeW - 28 - textX), textX, top + 148)
 
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
-  ctx.font = `400 ${Math.round(17 * PT)}px ${FONT}`
-  ctx.fillText(fit(ctx, n.body, x + w - pad - textX), textX, top + 262)
+  ctx.font = bodyFont
+  lines.forEach((ln, i) => {
+    ctx.fillText(ln, textX, top + 262 + i * BODY_LINE)
+  })
+
+  return cardH
 }
 
 function bottomControls(ctx: CanvasRenderingContext2D) {
@@ -720,7 +807,10 @@ export function createScreenCanvas(
   statusBar(ctx)
   lockGlyph(ctx, 1080)
   clockAndDate(ctx)
-  NOTICES.forEach((n, i) => notification(ctx, n, CARD.first + i * CARD.pitch))
+  let notifyY = CARD.first
+  for (const n of NOTICES) {
+    notifyY += notification(ctx, n, notifyY) + CARD.gap
+  }
   bottomControls(ctx)
 
   if (bloom) addDisplayBloom(canvas, ctx)
