@@ -33,8 +33,12 @@ import * as THREE from 'three'
    behind the viewer), and u 0.25 is what the back reflects.
    ================================================================== */
 
-const W = 2048
-const H = 1024
+// 1024 x 512, not 2048 x 1024. PMREM's sharpest cube face is 256 px and an
+// equirect of width W maps to about W/4 per face, so 1024 is exactly
+// matched: painting at 2048 was four times the work for detail that is
+// downsampled away before anything samples it.
+const W = 1024
+const H = 512
 
 /** Feather a rectangle by stacking shrinking strokes. */
 function softRect(
@@ -55,7 +59,7 @@ function softRect(
   ctx.fillRect(x0, y0, x1 - x0, y1 - y0)
   // Walk a few shrinking outlines so the edge reads as a diffused
   // source rather than a hard cut-out.
-  const steps = 12
+  const steps = 7
   for (let i = 1; i <= steps; i++) {
     const t = i / steps
     ctx.globalAlpha = 0.1 * (1 - t)
@@ -109,6 +113,17 @@ export function createStudioEquirect(): THREE.CanvasTexture {
   softRect(ctx, 0.44, 0.56, 0.06, 0.46, '#fdfdfc', 30)
   softRect(ctx, 0.94, 1.0, 0.08, 0.48, '#fafaf9', 30)
   softRect(ctx, 0.0, 0.06, 0.08, 0.48, '#fafaf9', 30)
+
+  /* --- horizon structure ---------------------------------------------
+     A head-on view of the front glass reflects this band, and the hero
+     camera sits about 15 degrees above the display centre, so it lands on
+     v around 0.42. A reflection with no shape in it is precisely what
+     makes a screen read as a printed panel rather than as glass: the eye
+     needs a bright edge and a dark band next to it to accept the
+     surface. */
+  softRect(ctx, 0.60, 0.94, 0.34, 0.43, '#ffffff', 8)
+  softRect(ctx, 0.60, 0.94, 0.44, 0.53, '#2f2f32', 8)
+  softRect(ctx, 0.62, 0.92, 0.56, 0.62, '#95948f', 12)
 
   /* --- ceiling ------------------------------------------------------- */
   softRect(ctx, 0.0, 1.0, 0.0, 0.05, '#ffffff', 18)

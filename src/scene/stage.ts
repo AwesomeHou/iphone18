@@ -77,12 +77,15 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
      environment is doing almost all of the work. The directional lights
      only add the specular sweep that travels the edge in the material
      fold, and that sweep is why their intensity is animated. */
+  performance.mark('dsh:env:start')
   const pmrem = new THREE.PMREMGenerator(renderer)
   const equirect = createStudioEquirect()
   const envRT = pmrem.fromEquirectangular(equirect)
   scene.environment = envRT.texture
   equirect.dispose()
   pmrem.dispose()
+  performance.mark('dsh:env:end')
+  performance.measure('dsh:env', 'dsh:env:start', 'dsh:env:end')
 
   // The environment carries the material. These two only add the
   // travelling specular that sells the material fold, so they are weak
@@ -105,11 +108,27 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
   const software = isSoftwareRenderer(renderer)
   if (software) renderer.setPixelRatio(1)
   const maxAniso = software ? 1 : renderer.capabilities.getMaxAnisotropy()
-  const phone = createPhone({
-    screen: createScreenTexture(maxAniso),
-    logo: createLogoTexture(),
-  })
+
+  performance.mark('dsh:screen:start')
+  const screenTex = createScreenTexture(maxAniso)
+  performance.mark('dsh:screen:end')
+  performance.measure('dsh:screen', 'dsh:screen:start', 'dsh:screen:end')
+
+  performance.mark('dsh:phone:start')
+  const phone = createPhone({ screen: screenTex, logo: createLogoTexture() })
   scene.add(phone.group)
+  performance.mark('dsh:phone:end')
+  performance.measure('dsh:phone', 'dsh:phone:start', 'dsh:phone:end')
+
+  // Compile every material program up front. Without this, three compiles a
+  // shader the first time each material is actually drawn, and because the
+  // fold 5 and 6 materials are frustum-culled until the camera travels
+  // there, that lands as a multi-second freeze in the middle of a scroll
+  // rather than as a cost at startup.
+  performance.mark('dsh:compile:start')
+  renderer.compile(scene, camera)
+  performance.mark('dsh:compile:end')
+  performance.measure('dsh:compile', 'dsh:compile:start', 'dsh:compile:end')
 
   /* --- ambient occlusion ------------------------------------------
      Everything on this phone that reads as "machined" is a cavity, and a

@@ -60,7 +60,7 @@ function boreY(
   deepY: number,
   floorY: number
 ): Recess {
-  const geo = new THREE.CylinderGeometry(r, r, Math.abs(floorY - deepY), 20, 1, false)
+  const geo = new THREE.CylinderGeometry(r, r, Math.abs(floorY - deepY), 12, 1, false)
   geo.translate(cx, (deepY + floorY) / 2, cz)
   const rr = (r + GROW) ** 2
   return {
@@ -79,7 +79,7 @@ function boreZ(
   deepZ: number,
   floorZ: number
 ): Recess {
-  const geo = new THREE.CylinderGeometry(r, r, Math.abs(floorZ - deepZ), 40, 1, false)
+  const geo = new THREE.CylinderGeometry(r, r, Math.abs(floorZ - deepZ), 24, 1, false)
   geo.rotateX(Math.PI / 2)
   geo.translate(cx, cy, (deepZ + floorZ) / 2)
   const rr = (r + GROW) ** 2
@@ -108,7 +108,7 @@ function portRecess(): Recess {
   const geo = new THREE.ExtrudeGeometry(roundedRectShape(w, h, h / 2), {
     depth: topY - bottomY,
     bevelEnabled: false,
-    curveSegments: 24,
+    curveSegments: 16,
   })
   // Extrude runs along +Z with the profile in XY. Stand it up: the
   // profile swings into XZ and the extrusion becomes the drilling axis.

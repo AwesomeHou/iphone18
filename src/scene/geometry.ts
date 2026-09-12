@@ -226,7 +226,7 @@ export function createBodyGeometry(
   depth: number,
   radius: number,
   bevel: number,
-  bevelSegments = 12
+  bevelSegments = 10
 ): THREE.BufferGeometry {
   const shape = roundedRectShape(width - bevel * 2, height - bevel * 2, radius - bevel)
   const geo = new THREE.ExtrudeGeometry(shape, {
@@ -236,7 +236,7 @@ export function createBodyGeometry(
     bevelSize: bevel,
     bevelOffset: 0,
     bevelSegments,
-    curveSegments: 48,
+    curveSegments: 32,
   })
   geo.computeBoundingBox()
   const bb = geo.boundingBox as THREE.Box3

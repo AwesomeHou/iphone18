@@ -94,6 +94,7 @@ export function createPhone(textures: {
   // Four zones, in ZONE order: front face, back face, band, chamfer.
   // One roughness for all of it is what made the phone read as a single
   // moulded shell.
+  performance.mark('dsh:body:start')
   const rawBody = createBodyGeometry(
     MM.width,
     MM.height,
@@ -105,10 +106,18 @@ export function createPhone(textures: {
   // Carve the port, the ten speaker bores and the two camera pockets, then
   // classify the result. Zoning has to follow the boolean: the recess
   // walls only exist afterwards.
+  performance.mark('dsh:body:end')
+  performance.measure('dsh:body', 'dsh:body:start', 'dsh:body:end')
+  performance.mark('dsh:carve:start')
   const carved = carveBody(rawBody)
+  performance.mark('dsh:carve:end')
+  performance.measure('dsh:carve', 'dsh:carve:start', 'dsh:carve:end')
   rawBody.dispose()
   const bodyGeo = track(carved.geometry)
+  performance.mark('dsh:zone:start')
   applyBodyZones(bodyGeo, MM.depth / 2, MM.depth / 2 - MM.bevel, carved.isCavity)
+  performance.mark('dsh:zone:end')
+  performance.measure('dsh:zone', 'dsh:zone:start', 'dsh:zone:end')
 
   const body = new THREE.Mesh(bodyGeo, [
     materials.bodyFront,

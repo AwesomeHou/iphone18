@@ -84,6 +84,14 @@ a:hover {
   display: block;
   z-index: 1;
   pointer-events: none;
+  /* The phone is built a couple of frames after the copy is painted, so
+     the canvas fades in rather than popping. */
+  opacity: 0;
+}
+
+body.is-3d #stage {
+  opacity: 1;
+  transition: opacity 500ms var(--ease-out-expo);
 }
 
 #stage[hidden] {

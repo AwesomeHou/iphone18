@@ -57,7 +57,7 @@ export function createMaterials(textures: {
     // Lifted above 1 to offset the blanket few percent GTAO takes off
     // every surface. The sheet has the bezel at #F7F7F8, essentially
     // paper white.
-    envMapIntensity: 1.25,
+    envMapIntensity: 1.45,
   })
 
   const bodyBack = new THREE.MeshPhysicalMaterial({
@@ -85,17 +85,27 @@ export function createMaterials(textures: {
     envMapIntensity: 1.2,
   })
 
+  /**
+   * A display emits; it is not a lit surface.
+   *
+   * The previous version carried BOTH `map` and `emissiveMap` from the
+   * same canvas, so every pixel was the content plus the content lit by
+   * the room. That is the single biggest reason the screen read as a
+   * printed panel: the diffuse term lifts the blacks off zero and washes
+   * the whole panel toward the ambient colour, which is exactly what a
+   * backlit LCD looks like and exactly what an OLED does not. Emissive
+   * only, so the black level follows the content.
+   *
+   * The gloss belongs to the cover glass layer on top, not here.
+   */
   const screen = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    map: screenTexture,
+    color: 0x000000,
     emissive: 0xffffff,
     emissiveMap: screenTexture,
     emissiveIntensity: 1,
     metalness: 0,
-    // Slightly rough, as a real panel under glass is. The gloss lives in
-    // the cover glass layer, not here.
-    roughness: 0.32,
-    envMapIntensity: 0.35,
+    roughness: 0.28,
+    envMapIntensity: 0.25,
   })
 
   /**
