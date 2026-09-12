@@ -120,18 +120,26 @@ export function createStudioEquirect(): THREE.CanvasTexture {
      v around 0.42. A reflection with no shape in it is precisely what
      makes a screen read as a printed panel rather than as glass: the eye
      needs a bright edge and a dark band next to it to accept the
-     surface. */
-  softRect(ctx, 0.60, 0.94, 0.34, 0.43, '#ffffff', 8)
-  softRect(ctx, 0.60, 0.94, 0.44, 0.53, '#2f2f32', 8)
-  softRect(ctx, 0.62, 0.92, 0.56, 0.62, '#6f6e6a', 12)
-  // A screen faces the viewer and the camera sits above it, so the glass
-  // mirrors DOWN, into canvas rows just past the horizon: this strip is
-  // what a head-on view of the display reflects. It wants a visible edge
-  // rather than a gradient, because glass is identified by the shape it
-  // reflects, but it must stay close to the panel's own luminance: a
-  // full-strength white strip here washes the black of the display out to
-  // a pale grey and the OLED reads as frosted plastic.
-  softRect(ctx, 0.63, 0.89, 0.53, 0.585, '#a9a7a3', 4)
+     surface.
+
+     The transitions between these are 1 to 4 px of feather, not the 8 to
+     40 used everywhere else in this file. The reflection on a FLAT sheet
+     of glass is 1:1 in angle, so a soft edge in the environment is a
+     soft edge on the display, and a display covered in soft grey
+     gradients is the definition of frosted plastic. Glass is recognised
+     by the sharpness of the boundary between a bright shape and a dark
+     one. */
+  softRect(ctx, 0.60, 0.94, 0.34, 0.425, '#ffffff', 4)
+  softRect(ctx, 0.60, 0.94, 0.428, 0.50, '#26272a', 3)
+  /* --- what the display reflects ------------------------------------
+     A screen faces the viewer and the camera sits above it, so the glass
+     mirrors DOWNWARD, into the rows just past the horizon, and the span
+     of rows it sweeps maps onto the length of the panel. This narrow
+     strip is the bright edge the comment above is about; the band below
+     it is the darkness on the other side of it. */
+  softRect(ctx, 0.58, 0.94, 0.503, 0.518, '#ffffff', 1)
+  softRect(ctx, 0.58, 0.94, 0.521, 0.60, '#1e1f22', 4)
+  softRect(ctx, 0.62, 0.92, 0.60, 0.66, '#8a8985', 10)
 
   /* --- ceiling ------------------------------------------------------- */
   softRect(ctx, 0.0, 1.0, 0.0, 0.05, '#ffffff', 18)

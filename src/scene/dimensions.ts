@@ -49,10 +49,15 @@ export const MM = {
 
   /** Front glass insets, measured from the OUTER edge. The sheet's bezel is
       a near-constant 4.8% of each dimension, which is why the top bezel is
-      visibly taller than the sides. */
+      visibly taller than the sides. Both got pulled in from the measured
+      21.04 / 20.29: at the printed 6:1 envelope they put a 21 mm band above
+      a 20 mm band around a 391 mm panel, and a forehead that is 5% of the
+      screen reads as a phone from 2017, not from this one. 16 / 15.4 keeps
+      the top taller than the chin, which is the relationship the sheet
+      actually draws, and hands the difference to the display. */
   bezelSide: 3.73, // 7/135 of the width
-  bezelTop: 21.04, // 28/575 of the height
-  bezelBottom: 20.29, // 27/575 of the height
+  bezelTop: 16.0,
+  bezelBottom: 15.4,
   /** The sheet draws a square-cornered panel, but nothing shipping looks
       like that: a real display's corners are concentric with the cover
       glass and clearly round. Kept here as a deliberate departure from
@@ -62,12 +67,16 @@ export const MM = {
       camera distance. */
   screenRadius: 7,
 
-  /** Earpiece slot. Note it sits BELOW the camera dot in the sheet. */
+  /** Earpiece slot. Note it sits BELOW the camera dot in the sheet.
+      Both moved up with the bezel, by a little less than the bezel shrank
+      so the forehead does not end up with the hardware pressed against
+      the glass: the slot and the dot keep roughly the same margin below
+      themselves as they had before. */
   earpieceWidth: 11.7, // 22/135
   earpieceHeight: 1.5, // 2/575
-  earpieceFromTop: 14.65, // 19.5/575
+  earpieceFromTop: 12.2,
   frontCameraRadius: 2.25, // 3/575
-  frontCameraFromTop: 7.89, // 10.5/575
+  frontCameraFromTop: 6.9,
 
   /** Rear camera and flash. "Upper left as seen from behind" is world +X,
       because the back viewer's right is world -X. */

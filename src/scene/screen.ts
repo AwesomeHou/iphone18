@@ -23,7 +23,11 @@ const CARD = {
   x: 90,
   w: 1260,
   h: 330,
-  pitch: 352,
+  /* 364, not 352. The bezels came in by 9.5 mm between them, which is
+     212 units of extra panel height, and the list has to grow into it:
+     eighteen cards at the old pitch left a visibly empty strip above the
+     home indicator. */
+  pitch: 364,
   first: 2000,
   r: 48,
 }
@@ -341,82 +345,80 @@ function appIcon(ctx: CanvasRenderingContext2D, color: string, kind: Glyph, x: n
 }
 
 /* --- wallpaper ----------------------------------------------------
-   A soft grey sweep on near-black, sampled as a chain of radial
-   gradients along a bezier. Radial gradients are inherently soft, so this
-   needs no ctx.filter, which Safari did not ship until 16.4. It also
-   keeps the whole 6:1 height changing as the camera travels down it;
-   a flat fill would read as a static image in the screen fold.
+   A few very large, very soft colour fields over black, the way Apple's
+   own dark wallpapers are built.
+
+   The previous version was the sheet's: a flat #3C4045 with a pale grey
+   sweep walked along a bezier. It matched the reference's measured
+   values and it still read as frosted plastic, because that is what a
+   mid-grey field with a soft white streak through it IS — the eye calls
+   it a backlit panel with a light leak across it, and no amount of cover
+   glass drawn on top changes that. An OLED is black; everything it shows
+   is light added to black. So the base is black and the colour is added,
+   which is also what makes the cover glass's own reflection legible: a
+   reflection can only be seen against a dark panel.
+
+   Radial gradients are inherently soft, so this needs no ctx.filter,
+   which Safari did not ship until 16.4. Elliptical rather than circular:
+   the panel is 6:1, and circular fields on it read as spotlights.
    ------------------------------------------------------------------ */
 
 function wallpaper(ctx: CanvasRenderingContext2D) {
-  // Matched to the sheet: its display measures #3C3F42 in the dark of
-  // the wallpaper and #5D6064 in the light of the sweep. A near-black
-  // base here renders ~40 luminance too dark once the cover glass is the
-  // only thing adding light back.
-  ctx.fillStyle = '#3c4045'
+  // Not quite #000. An OLED's off state is black, but the panel is behind
+  // glass that is never perfectly clean, and a floor of 3 or 4 keeps the
+  // display from looking like a hole cut in the page.
+  ctx.fillStyle = '#04050a'
   ctx.fillRect(0, 0, VW, VH)
 
-  const blob = (x: number, y: number, r: number, alpha: number, tint = '235,238,242') => {
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+  // Added like light rather than painted over: overlapping fields mix the
+  // way two coloured lamps do, instead of the second hiding the first.
+  ctx.globalCompositeOperation = 'lighter'
+
+  const field = (
+    x: number,
+    y: number,
+    rx: number,
+    ry: number,
+    tint: string,
+    alpha: number
+  ) => {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(rx, ry)
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
     g.addColorStop(0, `rgba(${tint},${alpha})`)
-    g.addColorStop(0.55, `rgba(${tint},${alpha * 0.32})`)
-    g.addColorStop(1, 'rgba(0,0,0,0)')
+    g.addColorStop(0.45, `rgba(${tint},${alpha * 0.55})`)
+    g.addColorStop(1, `rgba(${tint},0)`)
     ctx.fillStyle = g
-    ctx.fillRect(x - r, y - r, r * 2, r * 2)
+    ctx.fillRect(-1, -1, 2, 2)
+    ctx.restore()
   }
 
-  // The sweep: a bezier walked with overlapping blobs.
-  //
-  // Per-blob alpha has to stay very low. The blobs overlap heavily, and
-  // alpha compositing accumulates: at 0.3 each, five overlaps already
-  // saturate to white and the wallpaper reads as a light leak rather
-  // than the sheet's soft #72757A-on-#1D1E1D swoosh.
-  const p = [
-    [-260, 620],
-    [520, 1900],
-    [1280, 2900],
-    [1560, 4300],
-  ]
-  for (let i = 0; i <= 60; i++) {
-    const t = i / 60
-    const mt = 1 - t
-    const x =
-      mt * mt * mt * p[0][0] + 3 * mt * mt * t * p[1][0] + 3 * mt * t * t * p[2][0] + t * t * t * p[3][0]
-    const y =
-      mt * mt * mt * p[0][1] + 3 * mt * mt * t * p[1][1] + 3 * mt * t * t * p[2][1] + t * t * t * p[3][1]
-    blob(x, y, 220 + t * 190, 0.095, '248,250,252')
-  }
+  // Alphas stay low. These overlap, and additive compositing accumulates:
+  // at 0.9 each the middle of the panel saturates to a light blue and the
+  // wallpaper reads as a backlight again.
+  field(170, 850, 1500, 1900, '26,62,224', 0.5)
+  field(1160, 2500, 1400, 1750, '104,38,214', 0.46)
+  field(-260, 4600, 1500, 1850, '0,158,180', 0.4)
+  field(1340, 6800, 1500, 2000, '30,50,186', 0.46)
+  field(560, 8350, 1500, 1450, '116,30,162', 0.32)
 
-  // A second sweep, mirrored, so the lower two thirds are not dead.
-  const q = [
-    [1700, 4600],
-    [900, 5900],
-    [-200, 7000],
-    [300, 8900],
-  ]
-  for (let i = 0; i <= 60; i++) {
-    const t = i / 60
-    const mt = 1 - t
-    const x =
-      mt * mt * mt * q[0][0] + 3 * mt * mt * t * q[1][0] + 3 * mt * t * t * q[2][0] + t * t * t * q[3][0]
-    const y =
-      mt * mt * mt * q[0][1] + 3 * mt * mt * t * q[1][1] + 3 * mt * t * t * q[2][1] + t * t * t * q[3][1]
-    blob(x, y, 260 + t * 220, 0.07, '210,216,224')
-  }
+  ctx.globalCompositeOperation = 'source-over'
 
-  // Cool bias top and bottom so the display reads as a dark panel, not a
-  // grey field, at the extremes of the fold-2 dolly.
-  const top = ctx.createLinearGradient(0, 0, 0, 900)
-  top.addColorStop(0, 'rgba(0,0,0,0.16)')
+  // Scrims top and bottom, so the clock and the home indicator always
+  // have something to sit on and the panel is darkest at its edges, which
+  // is where the cover glass's own reflection is strongest.
+  const top = ctx.createLinearGradient(0, 0, 0, 1100)
+  top.addColorStop(0, 'rgba(0,0,0,0.5)')
   top.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = top
-  ctx.fillRect(0, 0, VW, 900)
+  ctx.fillRect(0, 0, VW, 1100)
 
-  const bottom = ctx.createLinearGradient(0, VH - 1200, 0, VH)
+  const bottom = ctx.createLinearGradient(0, VH - 1300, 0, VH)
   bottom.addColorStop(0, 'rgba(0,0,0,0)')
-  bottom.addColorStop(1, 'rgba(0,0,0,0.4)')
+  bottom.addColorStop(1, 'rgba(0,0,0,0.6)')
   ctx.fillStyle = bottom
-  ctx.fillRect(0, VH - 1200, VW, 1200)
+  ctx.fillRect(0, VH - 1300, VW, 1300)
 }
 
 /* --- layers ------------------------------------------------------- */
@@ -500,7 +502,7 @@ function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number) {
 }
 
 function bottomControls(ctx: CanvasRenderingContext2D) {
-  const cy = 8450
+  const cy = 8690
   const r = 60
   for (const cx of [300, VW - 300]) {
     ctx.beginPath()
@@ -530,7 +532,7 @@ function bottomControls(ctx: CanvasRenderingContext2D) {
   ctx.stroke()
 
   // home indicator
-  rr(ctx, VW / 2 - 210, 8620, 420, 13, 7)
+  rr(ctx, VW / 2 - 210, 8840, 420, 13, 7)
   ctx.fillStyle = 'rgba(255,255,255,0.5)'
   ctx.fill()
 }

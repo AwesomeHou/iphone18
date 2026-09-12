@@ -106,8 +106,15 @@ export function createMaterials(textures: {
     emissiveMap: screenTexture,
     emissiveIntensity: 1,
     metalness: 0,
-    roughness: 0.28,
-    envMapIntensity: 0.25,
+    roughness: 0.4,
+    // Zero, not "a little". Any diffuse response at all puts room light
+    // back onto the panel, and that wash is the other half of the frosted
+    // plastic read: a real display contributes nothing but its own
+    // emission, and every photon that reaches the eye off a phone screen
+    // either came out of the panel or bounced off the glass in front of
+    // it. The glass is a separate layer and it is the only one allowed to
+    // reflect.
+    envMapIntensity: 0,
   })
 
   /**
@@ -120,10 +127,14 @@ export function createMaterials(textures: {
   const coverGlass = new THREE.MeshPhysicalMaterial({
     color: 0x000000,
     metalness: 0,
-    roughness: 0.03,
+    // 0.012, down from 0.03. The reflection has to be a mirror, not a
+    // sheen: glass is identified by recognising the shape it reflects,
+    // and every bit of roughness turns that shape into a grey wash that
+    // reads as a matte surface.
+    roughness: 0.012,
     clearcoat: 1,
-    clearcoatRoughness: 0.03,
-    envMapIntensity: 1.9,
+    clearcoatRoughness: 0.01,
+    envMapIntensity: 2.6,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
@@ -193,8 +204,13 @@ export function createMaterials(textures: {
   const antenna = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     metalness: 0.12,
-    roughness: 0.5,
-    envMapIntensity: 1.6,
+    roughness: 0.44,
+    // 2.2, not 1.6. The cap faces away from the front hemisphere, so it
+    // is lit by the dim half of the studio, and the sheet has it at
+    // #EEEEEF: 39 luminance above the anodised body beside it. At 1.6 it
+    // rendered as a very slightly lighter grey band rather than as white
+    // ceramic.
+    envMapIntensity: 2.2,
   })
 
   /**
