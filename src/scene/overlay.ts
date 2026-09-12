@@ -23,11 +23,27 @@ interface Dim {
   align: 'left' | 'right' | 'center'
 }
 
+/**
+ * The callouts.
+ *
+ * Every one of these is offset OUTWARD from the body by 8 mm. Drawn on
+ * the body's own edges the rules lay exactly along the silhouette, and a
+ * 1 px line on top of the edge a viewer is reading as the product's
+ * outline reads as a mistake: it doubles the edge at the top and vanishes
+ * into it at the bottom, where the two disagree by a fraction of a pixel.
+ * 8 mm is roughly 17 px at the reveal fold's framing, which is a clear
+ * gap at every viewport without the line drifting off toward the copy.
+ *
+ * The end ticks then read as the extension marks a real dimension drawing
+ * would have between the object and its dimension line.
+ */
+const GAP = 8
+
 const DIMS: Dim[] = [
   {
     anchor: 'reveal',
-    from: [-36, -216, 0],
-    to: [-36, 216, 0],
+    from: [-36 - GAP, -216, 0],
+    to: [-36 - GAP, 216, 0],
     label: '432 毫米',
     lx: -16,
     ly: 0,
@@ -35,8 +51,8 @@ const DIMS: Dim[] = [
   },
   {
     anchor: 'reveal',
-    from: [-36, -216, 0],
-    to: [36, -216, 0],
+    from: [-36, -216 - GAP, 0],
+    to: [36, -216 - GAP, 0],
     label: '72 毫米',
     lx: 0,
     ly: 24,
@@ -47,8 +63,8 @@ const DIMS: Dim[] = [
     // A leader rather than a true dimension line: at this azimuth the
     // 7.8 mm thickness runs almost straight down the view axis, so a
     // line along Z would foreshorten to under 2 mm and vanish.
-    from: [36, 120, 0],
-    to: [86, 120, 0],
+    from: [36 + GAP, 120, 0],
+    to: [86 + GAP, 120, 0],
     label: '7.8 毫米',
     lx: 12,
     ly: -10,
