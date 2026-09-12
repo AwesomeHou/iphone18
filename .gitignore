@@ -1,0 +1,12 @@
+# dependencies & build
+node_modules/
+dist/
+.npm-cache/
+
+# 草稿箱：参考素材、临时脚本、截图，不入库
+scratch/
+
+# local
+*.local
+.DS_Store
+Thumbs.db

@@ -1,0 +1,95 @@
+/* ------------------------------------------------------------------
+   Design tokens.
+
+   These are Apple's own values, transcribed rather than re-invented.
+   The whole premise of this page is that it passes for apple.com, so a
+   greenfield palette would actively break the product. Contrast ratios
+   are noted and were verified individually: fidelity and WCAG AA happen
+   to agree on every pair used here.
+   ------------------------------------------------------------------ */
+
+:root {
+  /* Surfaces ------------------------------------------------------ */
+  --bg-light: #f5f5f7;
+  --bg-dark: #000000;
+  --surface: #ffffff;
+
+  /* Ink ----------------------------------------------------------- */
+  --ink: #1d1d1f;           /* on --bg-light: 15.6:1 */
+  --ink-2: #6e6e73;         /* on --bg-light:  4.66:1 */
+  --ink-3: #86868b;         /* on --bg-dark:   5.80:1 */
+  --on-dark: #f5f5f7;       /* on --bg-dark:  19.3:1 */
+  --on-dark-2: #a1a1a6;     /* on --bg-dark:   9.0:1 */
+
+  /* Accent -------------------------------------------------------- */
+  --accent: #0071e3;        /* white on this:  4.70:1 */
+  --accent-hover: #0077ed;
+  --accent-ring: rgba(0, 113, 227, 0.45);
+
+  /* Lines --------------------------------------------------------- */
+  --hairline-light: rgba(0, 0, 0, 0.12);
+  --hairline-dark: rgba(255, 255, 255, 0.16);
+
+  /* Type ---------------------------------------------------------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Helvetica Neue', Inter, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --fs-display: clamp(2.75rem, 1.2rem + 6.4vw, 5.5rem);
+  --fs-h2: clamp(2rem, 1.1rem + 3.6vw, 3.5rem);
+  --fs-h3: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  --fs-lead: clamp(1.25rem, 1.05rem + 0.8vw, 1.75rem);
+  --fs-body: 1.0625rem;
+  --fs-small: 0.875rem;
+  --fs-micro: 0.75rem;
+
+  --track-display: -0.02em;
+  --track-h2: -0.01em;
+  --track-body: -0.006em;
+
+  --lh-body: 1.47;
+  --lh-heading: 1.05;
+  --measure: 65ch;
+
+  /* Space (8px base, fluid at the top end) ------------------------ */
+  --s-1: 0.5rem;
+  --s-2: 0.75rem;
+  --s-3: 1rem;
+  --s-4: 1.5rem;
+  --s-5: 2rem;
+  --s-6: 3rem;
+  --s-7: 4rem;
+  --fold-pad: clamp(80px, 12vh, 160px);
+  --gutter: clamp(20px, 4vw, 48px);
+  --shell: 1024px;
+
+  /* Radii --------------------------------------------------------- */
+  --r-pill: 980px;
+  --r-tile: 18px;
+  --r-btn: 12px;
+
+  /* Semantic z-index. Never a bare 999. --------------------------- */
+  --z-canvas: 0;
+  --z-content: 1;
+  --z-overlay: 2;
+  --z-nav: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-tooltip: 400;
+
+  /* Motion -------------------------------------------------------- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --d-fast: 180ms;
+  --d-base: 420ms;
+  --d-slow: 900ms;
+
+  --nav-h: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --d-fast: 0ms;
+    --d-base: 0ms;
+    --d-slow: 0ms;
+  }
+}
