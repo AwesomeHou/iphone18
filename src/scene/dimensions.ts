@@ -112,6 +112,16 @@ export const SCREEN = {
   z: FLAT.frontZ + 0.02,
 } as const
 
+/** Cover glass. It sits inside the frame, so a hairline of the body
+    shows around it, and in front of the display so the reflection is
+    not depth-rejected where the panel is. */
+export const COVER = {
+  width: FLAT.width - 0.7,
+  height: FLAT.height - 0.7,
+  radius: FLAT.radius - 0.35,
+  z: FLAT.frontZ + 0.05,
+} as const
+
 /** Convenience: mm measured down from the top edge, as the sheet is. */
 export const fromTop = (mm: number): number => MM.height / 2 - mm
 /** Convenience: mm measured in from the left edge of the BACK view. */

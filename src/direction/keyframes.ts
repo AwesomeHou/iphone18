@@ -152,7 +152,12 @@ export const KEYS: CameraKey[] = [
     target: [0, 0, -78],
     distance: 1302,
     truck: 0,
-    pedestal: -0.3,
+    // Zero on purpose. The pedestal is a world-Y offset, and this is the
+    // one key where the camera is rolled 90 degrees, so world Y is the
+    // image's HORIZONTAL axis: a pedestal here slides the hairline out of
+    // frame sideways instead of moving it up. target.z is the vertical
+    // control, and it already lifts the line.
+    pedestal: 0,
     azimuth: Math.PI / 2,
     elevation: 0,
     roll: Math.PI / 2,

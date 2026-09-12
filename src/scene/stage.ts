@@ -1,4 +1,9 @@
 import * as THREE from 'three'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { createStudioEquirect } from './environment'
 import { createScreenTexture } from './screen'
 import { createLogoTexture } from './textures'
 import { createPhone, type Phone } from './phone'
@@ -42,68 +47,6 @@ export function isSoftwareRenderer(renderer: THREE.WebGLRenderer): boolean {
   }
 }
 
-/**
- * A studio built in code, in place of three's RoomEnvironment.
- *
- * RoomEnvironment averages quite dark, and at metalness 1 the aluminium
- * has no diffuse term at all, so the environment IS the body colour: with
- * RoomEnvironment the phone rendered mid-grey instead of the sheet's
- * near-white silver.
- *
- * The layout is a real product-shot lighting setup. A big bright ceiling
- * panel lifts the top face and rolls a highlight along the upper edge;
- * unequal side panels give the long vertical highlight the sheet shows
- * down the chamfer; a deliberately dark floor lets the back fall off
- * toward the bottom, which is exactly the gradient measured off the
- * sheet (#F0F1F3 near the top to #A7A3A1 at the bottom).
- *
- * Built at unit scale so the default PMREM near/far planes contain it.
- */
-function createStudioEnvironment(): THREE.Scene {
-  const env = new THREE.Scene()
-  const panel = (color: number) => new THREE.MeshBasicMaterial({ color })
-
-  const shell = new THREE.Mesh(
-    new THREE.BoxGeometry(30, 20, 30),
-    new THREE.MeshBasicMaterial({ color: 0xc6ccd4, side: THREE.BackSide })
-  )
-  env.add(shell)
-
-  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(24, 22), panel(0xffffff))
-  ceiling.position.set(0, 9.5, 0)
-  ceiling.rotation.x = Math.PI / 2
-  env.add(ceiling)
-
-  // Directly behind the camera. Without it the front bezel reflects the
-  // dull back of the shell and reads mid-grey, where the sheet has it at
-  // #F1F1F3.
-  const front = new THREE.Mesh(new THREE.PlaneGeometry(22, 16), panel(0xffffff))
-  front.position.set(0, 1, 13)
-  front.rotation.y = Math.PI
-  env.add(front)
-
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(22, 16), panel(0xdde3ea))
-  back.position.set(0, 1, -13)
-  env.add(back)
-
-  const left = new THREE.Mesh(new THREE.PlaneGeometry(16, 14), panel(0xf4f8fc))
-  left.position.set(-13, 1, 0)
-  left.rotation.y = Math.PI / 2
-  env.add(left)
-
-  const right = new THREE.Mesh(new THREE.PlaneGeometry(16, 14), panel(0xd8dfe8))
-  right.position.set(13, 1, 0)
-  right.rotation.y = -Math.PI / 2
-  env.add(right)
-
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), panel(0x6f757e))
-  floor.position.set(0, -9.5, 0)
-  floor.rotation.x = -Math.PI / 2
-  env.add(floor)
-
-  return env
-}
-
 export function createStage(canvas: HTMLCanvasElement): Stage {
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -135,25 +78,28 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
      only add the specular sweep that travels the edge in the material
      fold, and that sweep is why their intensity is animated. */
   const pmrem = new THREE.PMREMGenerator(renderer)
-  const studio = createStudioEnvironment()
-  const envRT = pmrem.fromScene(studio, 0.03)
+  const equirect = createStudioEquirect()
+  const envRT = pmrem.fromEquirectangular(equirect)
   scene.environment = envRT.texture
-  studio.traverse((o) => {
-    const m = o as THREE.Mesh
-    m.geometry?.dispose()
-    const mat = m.material as THREE.Material | THREE.Material[] | undefined
-    if (Array.isArray(mat)) mat.forEach((x) => x.dispose())
-    else mat?.dispose()
-  })
+  equirect.dispose()
   pmrem.dispose()
 
-  const key = new THREE.DirectionalLight(0xffffff, 1.1)
+  // The environment carries the material. These two only add the
+  // travelling specular that sells the material fold, so they are weak
+  // and strictly neutral: a tinted rim was what turned the body blue.
+  const key = new THREE.DirectionalLight(0xfffdfa, 0.85)
   key.position.set(420, 900, 760)
   scene.add(key)
 
-  const rim = new THREE.DirectionalLight(0xe6eeff, 0.6)
+  const rim = new THREE.DirectionalLight(0xffffff, 0.35)
   rim.position.set(-700, 260, -820)
   scene.add(rim)
+
+  // A hint of bounce from below, which is what stops the lower half of
+  // the body going dead.
+  const bounce = new THREE.DirectionalLight(0xfff6ec, 0.18)
+  bounce.position.set(120, -600, 420)
+  scene.add(bounce)
 
   /* --- content ---------------------------------------------------- */
   const software = isSoftwareRenderer(renderer)
@@ -165,6 +111,46 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
   })
   scene.add(phone.group)
 
+  /* --- ambient occlusion ------------------------------------------
+     Everything on this phone that reads as "machined" is a cavity, and a
+     cavity with no occlusion reads as a painted dent. Ground-truth AO
+     also darkens the contact under the button and inside the camera
+     pockets, which is most of what separates a product render from a
+     CAD turntable.
+
+     Skipped on software rasterisers: this is a full-screen pass and
+     SwiftShader already struggles with the display texture alone. */
+  let composer: EffectComposer | null = null
+  let gtao: GTAOPass | null = null
+  if (!software) {
+    composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(scene, camera))
+    gtao = new GTAOPass(scene, camera, 1, 1)
+    gtao.output = GTAOPass.OUTPUT.Default
+    gtao.blendIntensity = 0.5
+    gtao.updateGtaoMaterial({
+      // Radii are in world units, and a world unit is a millimetre, so
+      // these are tuned to the size of the features: a 0.76 mm speaker
+      // bore and a 5.5 mm deep port pocket.
+      radius: 4.5,
+      distanceExponent: 1,
+      thickness: 8,
+      scale: 1,
+      samples: 24,
+      distanceFallOff: 1,
+      screenSpaceRadius: false,
+    })
+    // Confine the horizon search to the phone's own volume. Without this
+    // the transparent background is read as geometry sitting on the far
+    // plane, every pixel is judged occluded, and the phone renders black;
+    // widen the radius and it disappears entirely.
+    gtao.setSceneClipBox(
+      new THREE.Box3(new THREE.Vector3(-90, -280, -60), new THREE.Vector3(90, 280, 60))
+    )
+    composer.addPass(gtao)
+    composer.addPass(new OutputPass())
+  }
+
   const resize = () => {
     const w = window.innerWidth
     const h = window.innerHeight
@@ -173,6 +159,13 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
     renderer.setSize(w, h, false)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    // EffectComposer.setSize already forwards the DEVICE size to every
+    // pass. Calling gtao.setSize with the CSS size afterwards overwrites
+    // that with an unscaled one, and the AO buffer is then sampled at the
+    // wrong scale: the whole phone goes black and the denoiser leaves a
+    // tiling artefact across it.
+    composer?.setPixelRatio(dpr)
+    composer?.setSize(w, h)
   }
   resize()
 
@@ -186,7 +179,8 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
     const dt = last ? Math.min((now - last) / 1000, 0.05) : 0.016
     last = now
     update?.(dt, (now - t0) / 1000)
-    renderer.render(scene, camera)
+    if (composer) composer.render(dt)
+    else renderer.render(scene, camera)
   }
 
   return {
@@ -211,6 +205,7 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
       if (raf) cancelAnimationFrame(raf)
       phone.dispose()
       envRT.dispose()
+      composer?.dispose()
       renderer.dispose()
     },
   }

@@ -349,7 +349,11 @@ function appIcon(ctx: CanvasRenderingContext2D, color: string, kind: Glyph, x: n
    ------------------------------------------------------------------ */
 
 function wallpaper(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = '#08090a'
+  // Matched to the sheet: its display measures #3C3F42 in the dark of
+  // the wallpaper and #5D6064 in the light of the sweep. A near-black
+  // base here renders ~40 luminance too dark once the cover glass is the
+  // only thing adding light back.
+  ctx.fillStyle = '#313437'
   ctx.fillRect(0, 0, VW, VH)
 
   const blob = (x: number, y: number, r: number, alpha: number, tint = '235,238,242') => {
@@ -380,7 +384,7 @@ function wallpaper(ctx: CanvasRenderingContext2D) {
       mt * mt * mt * p[0][0] + 3 * mt * mt * t * p[1][0] + 3 * mt * t * t * p[2][0] + t * t * t * p[3][0]
     const y =
       mt * mt * mt * p[0][1] + 3 * mt * mt * t * p[1][1] + 3 * mt * t * t * p[2][1] + t * t * t * p[3][1]
-    blob(x, y, 220 + t * 190, 0.085, '248,250,252')
+    blob(x, y, 220 + t * 190, 0.072, '248,250,252')
   }
 
   // A second sweep, mirrored, so the lower two thirds are not dead.
@@ -397,20 +401,20 @@ function wallpaper(ctx: CanvasRenderingContext2D) {
       mt * mt * mt * q[0][0] + 3 * mt * mt * t * q[1][0] + 3 * mt * t * t * q[2][0] + t * t * t * q[3][0]
     const y =
       mt * mt * mt * q[0][1] + 3 * mt * mt * t * q[1][1] + 3 * mt * t * t * q[2][1] + t * t * t * q[3][1]
-    blob(x, y, 260 + t * 220, 0.06, '210,216,224')
+    blob(x, y, 260 + t * 220, 0.05, '210,216,224')
   }
 
   // Cool bias top and bottom so the display reads as a dark panel, not a
   // grey field, at the extremes of the fold-2 dolly.
   const top = ctx.createLinearGradient(0, 0, 0, 900)
-  top.addColorStop(0, 'rgba(0,0,0,0.55)')
+  top.addColorStop(0, 'rgba(0,0,0,0.35)')
   top.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = top
   ctx.fillRect(0, 0, VW, 900)
 
   const bottom = ctx.createLinearGradient(0, VH - 1200, 0, VH)
   bottom.addColorStop(0, 'rgba(0,0,0,0)')
-  bottom.addColorStop(1, 'rgba(0,0,0,0.75)')
+  bottom.addColorStop(1, 'rgba(0,0,0,0.55)')
   ctx.fillStyle = bottom
   ctx.fillRect(0, VH - 1200, VW, 1200)
 }

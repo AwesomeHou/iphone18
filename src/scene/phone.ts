@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import { ANCHORS, FLAT, MM, SCREEN, fromBackLeft, fromTop } from './dimensions'
+import { ANCHORS, COVER, FLAT, MM, SCREEN, fromBackLeft, fromTop } from './dimensions'
 import {
-  bottomFacingCircle,
-  bottomFacingRoundedRect,
+  applyBodyZones,
   createBodyGeometry,
   roundedPlaneGeometry,
   roundedRectShape,
 } from './geometry'
+import { carveBody } from './recess'
 import type { PhoneMaterials } from './materials'
 import { createMaterials } from './materials'
 
@@ -59,7 +59,7 @@ const BACK = {
   logo: 0.3,
   lens: 0.45,
   ring: 0.55,
-  flash: 0.45,
+  flash: 0.25,
 } as const
 
 function frontFacing(geo: THREE.BufferGeometry, x: number, y: number, depth: number): THREE.Mesh {
@@ -91,10 +91,32 @@ export function createPhone(textures: {
   }
 
   /* --- body ------------------------------------------------------- */
-  const body = new THREE.Mesh(
-    track(createBodyGeometry(MM.width, MM.height, MM.depth, MM.cornerRadius, MM.bevel, 7)),
-    materials.aluminum
+  // Four zones, in ZONE order: front face, back face, band, chamfer.
+  // One roughness for all of it is what made the phone read as a single
+  // moulded shell.
+  const rawBody = createBodyGeometry(
+    MM.width,
+    MM.height,
+    MM.depth,
+    MM.cornerRadius,
+    MM.bevel,
+    14
   )
+  // Carve the port, the ten speaker bores and the two camera pockets, then
+  // classify the result. Zoning has to follow the boolean: the recess
+  // walls only exist afterwards.
+  const carved = carveBody(rawBody)
+  rawBody.dispose()
+  const bodyGeo = track(carved.geometry)
+  applyBodyZones(bodyGeo, MM.depth / 2, MM.depth / 2 - MM.bevel, carved.isCavity)
+
+  const body = new THREE.Mesh(bodyGeo, [
+    materials.bodyFront,
+    materials.bodyBack,
+    materials.bodyBand,
+    materials.bodyChamfer,
+    materials.cavity,
+  ])
   group.add(body)
 
   /* --- front ------------------------------------------------------ */
@@ -125,25 +147,44 @@ export function createPhone(textures: {
   frontCam.material = materials.frontCamera
   group.add(frontCam)
 
+  /* --- cover glass ------------------------------------------------
+     One specular sheet over the whole front face. Additive, so it lays
+     its reflection over the bezel and the display instead of diluting
+     them, and it is what makes the front read as a single piece of
+     glass rather than a panel printed into a frame. */
+  const cover = new THREE.Mesh(
+    track(roundedPlaneGeometry(COVER.width, COVER.height, COVER.radius)),
+    materials.coverGlass
+  )
+  cover.position.set(0, SCREEN.centerY, COVER.z)
+  cover.renderOrder = 5
+  group.add(cover)
+
   /* --- back: antenna cap ------------------------------------------ */
   const capHeight = FLAT.height / 2 - fromTop(MM.capFromTop)
-  const capGeo = track(
-    new THREE.ShapeGeometry(capShape(FLAT.width, capHeight, FLAT.radius), 24)
-  )
-  capGeo.translate(0, fromTop(MM.capFromTop), 0)
-  const cap = backFacing(capGeo, 0, 0, BACK.cap)
-  cap.material = materials.antenna
-  group.add(cap)
+  const capBaseY = fromTop(MM.capFromTop)
+  const cap = capShape(FLAT.width, capHeight, FLAT.radius)
+  // Punch the camera pockets out of the cap, in the cap's own frame.
+  for (const p of carved.capPockets) {
+    const hole = new THREE.Path()
+    hole.absarc(p.x, p.y - capBaseY, p.r, 0, Math.PI * 2, true)
+    cap.holes.push(hole)
+  }
+  const capGeo = track(new THREE.ShapeGeometry(cap, 32))
+  capGeo.translate(0, capBaseY, 0)
+  const capMesh = backFacing(capGeo, 0, 0, BACK.cap)
+  capMesh.material = materials.antenna
+  group.add(capMesh)
 
   /* --- back: camera, flash, logo ---------------------------------- */
-  const lens = backFacing(
-    // 64 segments: at 32 the environment reflection facets into visible
-    // radial spokes in the macro shot.
-    track(new THREE.CircleGeometry(MM.lensRadius, 64)),
-    fromBackLeft(MM.lensFromLeft),
-    fromTop(MM.rearFromTop),
-    BACK.lens
+  // A shallow dome, not a disc. A flat circle in a pocket still reads as
+  // a printed dot; the curvature is what gives it a specular highlight
+  // that moves as the camera orbits.
+  const lensDome = track(
+    new THREE.SphereGeometry(MM.lensRadius, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2)
   )
+  lensDome.scale(1, 1, 0.42)
+  const lens = backFacing(lensDome, fromBackLeft(MM.lensFromLeft), fromTop(MM.rearFromTop), BACK.lens)
   lens.material = materials.lens
   group.add(lens)
 
@@ -189,36 +230,23 @@ export function createPhone(textures: {
         1
       )
     ),
-    materials.aluminum
+    materials.bodyChamfer
   )
   button.position.set(MM.width / 2 + MM.buttonProtrusion - 1, fromTop(MM.buttonFromTop), 0)
   group.add(button)
 
   /* --- bottom edge ------------------------------------------------
-     y is the phone's OUTER envelope, not the flat-face height. The
-     extrusion is widest at mid-thickness, so the bottom of the body sits
-     at -height/2 there: placing the port at -FLAT.height/2 buries it
-     inside the body and it renders as nothing at all. Over the 3 mm the
-     port spans in z the surface is flat to within a tenth of a
-     millimetre, so a flat cutout is honest here. */
-  const bottomY = -MM.height / 2 - MM.portSurfaceOffset
+     No decals here any more. The port and the ten speaker holes are cut
+     into the body by the boolean in recess.ts, so the bottom edge is
+     geometry rather than a dark shape laid on top of it. */
 
-  const port = new THREE.Mesh(
-    track(bottomFacingRoundedRect(MM.portWidth, MM.portHeight, MM.portHeight / 2)),
+  // A socket tongue, so the port reads as a connector rather than a dent.
+  const tongue = new THREE.Mesh(
+    track(new THREE.BoxGeometry(MM.portWidth - 2.2, 3.4, 1.1)),
     materials.slot
   )
-  port.position.set(0, bottomY, 0)
-  group.add(port)
-
-  const holeGeo = track(bottomFacingCircle(MM.speakerHoleRadius, 16))
-  for (let i = 0; i < MM.speakerHoles; i++) {
-    const x = MM.speakerFirst + i * MM.speakerPitch
-    for (const sign of [-1, 1]) {
-      const hole = new THREE.Mesh(holeGeo, materials.slot)
-      hole.position.set(sign * x, bottomY, 0)
-      group.add(hole)
-    }
-  }
+  tongue.position.set(0, -MM.height / 2 + 3.6, 0)
+  group.add(tongue)
 
   /* --- orientation ------------------------------------------------
      The group is authored with +Y up and the front facing +Z, matching

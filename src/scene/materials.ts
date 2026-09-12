@@ -1,26 +1,46 @@
 import * as THREE from 'three'
 
 export interface PhoneMaterials {
-  aluminum: THREE.MeshPhysicalMaterial
+  /** ZONE.frontFace: painted bezel under cover glass. */
+  bodyFront: THREE.MeshPhysicalMaterial
+  /** ZONE.backFace: blasted anodised aluminium. */
+  bodyBack: THREE.MeshPhysicalMaterial
+  /** ZONE.band: the machined side band. */
+  bodyBand: THREE.MeshPhysicalMaterial
+  /** ZONE.chamfer: the polished break where band meets face. */
+  bodyChamfer: THREE.MeshPhysicalMaterial
+  /** The display itself: content, with no cover glass of its own. */
   screen: THREE.MeshPhysicalMaterial
+  /** Cover glass over the whole front face, added as a specular layer. */
+  coverGlass: THREE.MeshPhysicalMaterial
   lens: THREE.MeshPhysicalMaterial
   lensRing: THREE.MeshPhysicalMaterial
   flash: THREE.MeshPhysicalMaterial
   slot: THREE.MeshStandardMaterial
+  cavity: THREE.MeshStandardMaterial
   antenna: THREE.MeshStandardMaterial
   logo: THREE.MeshPhysicalMaterial
   frontCamera: THREE.MeshStandardMaterial
 }
 
 /**
- * The body reads as light anodised aluminium: near-white base, fully
- * metallic, and a clearcoat so the flat face picks up a crisp room
- * reflection instead of going chalky.
+ * Material notes, all referenced to docs/iphone18.png.
  *
- * The display is a light source, not a lit surface. It gets both `map` and
- * `emissiveMap` from the same canvas so the UI stays readable when the rest
- * of the phone is in shadow, plus a clearcoat layer standing in for cover
- * glass.
+ * The sheet's body measures as three different surfaces, not one:
+ *
+ *   front bezel   #F7F7F8   lum 247   R-B -1
+ *   side          #F8F8F8   lum 248   R-B  0
+ *   back 15%      #CBC6C6   lum 199   R-B +5
+ *   back 92%      #A7A2A1   lum 163   R-B +6
+ *
+ * The front is bright because it is white paint under glass, so it is a
+ * mostly diffuse white rather than a mirror. The back is blasted, so it
+ * is rough and lands around 50 luminance lower. The chamfer is polished,
+ * and that is where the bright line down the edge comes from.
+ *
+ * Nothing here carries a tint of its own. Every colour in the sheet is
+ * neutral or warm, and a tinted base is what turned the first attempt
+ * blue.
  */
 export function createMaterials(textures: {
   screen: THREE.Texture | null
@@ -28,17 +48,41 @@ export function createMaterials(textures: {
 }): PhoneMaterials {
   const { screen: screenTexture, logo: logoTexture } = textures
 
-  const aluminum = new THREE.MeshPhysicalMaterial({
-    // Near-white base, as measured off the sheet's hero render
-    // (#F6FAFB in the lit areas). At metalness 1 the colour IS the
-    // reflectance, so a grey here reads as a grey phone no matter how
-    // bright the environment gets.
-    color: 0xf0f2f4,
+  const bodyFront = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 0,
+    roughness: 0.6,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.4,
+    // Lifted above 1 to offset the blanket few percent GTAO takes off
+    // every surface. The sheet has the bezel at #F7F7F8, essentially
+    // paper white.
+    envMapIntensity: 1.25,
+  })
+
+  const bodyBack = new THREE.MeshPhysicalMaterial({
+    color: 0xf8f7f5,
     metalness: 1,
-    roughness: 0.3,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.28,
+    roughness: 0.46,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.45,
     envMapIntensity: 1,
+  })
+
+  const bodyBand = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 1,
+    roughness: 0.26,
+    clearcoat: 0.25,
+    clearcoatRoughness: 0.3,
+    envMapIntensity: 1.05,
+  })
+
+  const bodyChamfer = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 1,
+    roughness: 0.08,
+    envMapIntensity: 1.2,
   })
 
   const screen = new THREE.MeshPhysicalMaterial({
@@ -48,56 +92,98 @@ export function createMaterials(textures: {
     emissiveMap: screenTexture,
     emissiveIntensity: 1,
     metalness: 0,
-    roughness: 0.045,
+    // Slightly rough, as a real panel under glass is. The gloss lives in
+    // the cover glass layer, not here.
+    roughness: 0.32,
+    envMapIntensity: 0.35,
+  })
+
+  /**
+   * Additive, black, glossy: the only thing it contributes is the
+   * specular reflection of the studio, laid over whatever is behind it.
+   * An ordinary transparent layer would have its reflection scaled by the
+   * same opacity that makes it see-through, so the glass would come out
+   * both faint and matt.
+   */
+  const coverGlass = new THREE.MeshPhysicalMaterial({
+    color: 0x000000,
+    metalness: 0,
+    roughness: 0.015,
     clearcoat: 1,
-    clearcoatRoughness: 0.03,
-    envMapIntensity: 0.75,
+    clearcoatRoughness: 0.02,
+    envMapIntensity: 2.1,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
   })
 
   const lens = new THREE.MeshPhysicalMaterial({
-    color: 0x08080a,
-    metalness: 0.4,
-    roughness: 0.06,
+    color: 0x0a0c12,
+    metalness: 0.5,
+    roughness: 0.03,
     clearcoat: 1,
-    clearcoatRoughness: 0.02,
-    envMapIntensity: 1.4,
+    clearcoatRoughness: 0.01,
+    envMapIntensity: 2,
   })
 
   const lensRing = new THREE.MeshPhysicalMaterial({
-    color: 0xc9cbcf,
+    color: 0xcfd2d6,
     metalness: 1,
-    roughness: 0.22,
-    envMapIntensity: 1.1,
+    roughness: 0.16,
+    envMapIntensity: 1.2,
   })
 
   const flash = new THREE.MeshPhysicalMaterial({
     color: 0xfaf7ee,
     metalness: 0,
-    roughness: 0.35,
-    transmission: 0,
+    roughness: 0.3,
     clearcoat: 1,
+    clearcoatRoughness: 0.1,
     emissive: 0xfff4d6,
-    emissiveIntensity: 0.12,
+    emissiveIntensity: 0.08,
   })
 
+  /** The dark inside of a hole. */
   const slot = new THREE.MeshStandardMaterial({
     color: 0x141416,
     metalness: 0.2,
     roughness: 0.62,
   })
 
-  const antenna = new THREE.MeshStandardMaterial({
-    color: 0xf3f4f5,
-    metalness: 0.35,
-    roughness: 0.66,
+  /**
+   * The wall of a recess. Deliberately dark and non-metallic: a machined
+   * bore is mostly occluded and reads close to black, and a reflective
+   * wall turns the speaker grilles into bright pips instead of holes.
+   */
+  const cavity = new THREE.MeshStandardMaterial({
+    color: 0x090a0b,
+    metalness: 0.12,
+    roughness: 0.88,
   })
 
+  /** The antenna cap. The sheet has it at #EEEEEF, a clear 39 luminance
+      above the body beside it, so it is a bright ceramic band rather
+      than a slightly lighter aluminium. */
+  const antenna = new THREE.MeshStandardMaterial({
+    color: 0xfcfcfb,
+    metalness: 0.35,
+    roughness: 0.4,
+    envMapIntensity: 1.35,
+  })
+
+  /**
+   * The etched mark. depthWrite is off deliberately: it is a decal 0.3 mm
+   * proud of the back, and if it writes depth the AO prepass sees a
+   * rectangular plate floating there and darkens a faint rectangle around
+   * it, roughly the size of the texture.
+   */
   const logo = new THREE.MeshPhysicalMaterial({
-    color: 0xb7b9be,
+    color: 0xb4b6ba,
     map: logoTexture,
     transparent: true,
-    metalness: 0.55,
-    roughness: 0.42,
+    depthWrite: false,
+    metalness: 0.6,
+    roughness: 0.38,
     envMapIntensity: 1,
   })
 
@@ -107,15 +193,29 @@ export function createMaterials(textures: {
     roughness: 0.3,
   })
 
-  return { aluminum, screen, lens, lensRing, flash, slot, antenna, logo, frontCamera }
+  return {
+    bodyFront,
+    bodyBack,
+    bodyBand,
+    bodyChamfer,
+    screen,
+    coverGlass,
+    lens,
+    lensRing,
+    flash,
+    slot,
+    cavity,
+    antenna,
+    logo,
+    frontCamera,
+  }
 }
 
 export function disposeMaterials(m: PhoneMaterials): void {
   for (const mat of Object.values(m)) {
-    for (const key of ['map', 'emissiveMap'] as const) {
-      const tex = (mat as THREE.MeshPhysicalMaterial)[key]
-      if (tex) tex.dispose()
-    }
+    const phys = mat as THREE.MeshPhysicalMaterial
+    phys.map?.dispose()
+    phys.emissiveMap?.dispose()
     mat.dispose()
   }
 }
