@@ -6,7 +6,7 @@ import { createScrollDriver } from './direction/scroll'
 import { createRig, resolveKeys } from './direction/timeline'
 import { createOverlay } from './scene/overlay'
 import { createStage, hasWebGL } from './scene/stage'
-import { loadWallpaper } from './scene/screen'
+import { loadAlbumArt, loadWallpaper } from './scene/screen'
 import { initReveal } from './ui/reveal'
 
 /**
@@ -39,6 +39,7 @@ function boot(): void {
   // Started before anything else and awaited in build(), so the fetch
   // overlaps the first paint instead of sitting in front of it.
   const wallpaper = loadWallpaper()
+  const albumArt = loadAlbumArt()
 
   if (!canvas || !calloutRoot || !hasWebGL()) {
     // No 3D: the page is still complete. Every word is real DOM and was
@@ -56,7 +57,8 @@ function boot(): void {
     // The display's wallpaper is a photograph rather than a gradient, so
     // the texture cannot be built until it is decoded. It resolves null
     // after 3 s or on error, and the procedural fallback covers that.
-    const stage = createStage(canvas, await wallpaper)
+    const [wall, album] = await Promise.all([wallpaper, albumArt])
+    const stage = createStage(canvas, wall, album)
     const overlay = createOverlay(calloutRoot, anchors)
 
     let rig = createRig(stage.camera, resolveKeys(anchors))

@@ -16,13 +16,18 @@ const VW = 1440
 const VH = Math.round((VW * SCREEN.height) / SCREEN.width) // 8717
 const PT = VW / 393
 
+/** The lock screen's clock. */
+const CLOCK_TIME = '1:00'
+/** 9月10日 is a Sunday if 9月12日 is a Tuesday, which the sheet had. */
+const CLOCK_DATE = '9月10日 星期日'
+
 const FONT =
   'system-ui, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif'
 
 const CARD = {
   x: 90,
   w: 1260,
-  h: 330,
+  h: 460,
   /**
    * Vertical gap between cards, not a fixed pitch. Cards are as tall as
    * their body needs: a notification body that does not fit on one line
@@ -30,15 +35,26 @@ const CARD = {
    * down. A fixed pitch plus a truncating body would silently eat the
    * text, which is what it did to the wallet notification.
    */
-  gap: 52,
+  gap: 92,
   first: 1980,
-  r: 48,
+  r: 56,
 }
 
-/** Line height for a wrapped body. 76 units = 20.7 pt. */
-const BODY_LINE = 76
+/** Line height for a wrapped body. */
+const BODY_LINE = 84
 /** How many body lines a card will show before it truncates. */
 const BODY_LINES = 2
+
+/**
+ * The Now Playing widget. It is not a notification and does not share its
+ * metrics: iOS draws it taller, with the artwork, a scrubber and a row of
+ * transport controls.
+ */
+const NOW_PLAYING = {
+  h: 860,
+  pad: 62,
+  art: 280,
+}
 
 interface Notice {
   app: string
@@ -69,27 +85,22 @@ type Glyph =
   | 'mic'
   | 'find'
 
-/* The screen is 6:1. Eighteen notifications fit at once without
-   scrolling, which is the entire argument the section is making. */
+/* The lock screen is a 6:1 panel, and everything on it fits at once
+   without scrolling, which is the entire argument the section is making.
+
+   Timestamps all sit between 00:00 and 01:00 because the clock above them
+   reads 1:00. */
 const NOTICES: Notice[] = [
   { app: '超信', color: '#07c160', glyph: 'bubble', time: '现在', title: '诺澜', body: '「我等你」等 7 条新消息' },
-
-  { app: '提醒事项', color: '#ff9500', glyph: 'check', time: '15:02', title: '「把 iPhone 18 放进裤袋」', body: '测试结果：失败' },
-  { app: '健康', color: '#ff2d55', glyph: 'heart', time: '15:04', title: '今日步数 0 步', body: '你一直站在原地找手机的上半部分' },
-  { app: '电池', color: '#34c759', glyph: 'bolt', time: '15:08', title: '电量 87%', body: '预计可用 41 小时' },
-  { app: '天气', color: '#007aff', glyph: 'sun', time: '15:10', title: '今日晴', body: '手机上方 20 厘米处有云' },
-  { app: '钱包', color: '#1c1c1e', glyph: 'card', time: '15:12', title: '最近交易', body: '《飞跃创界山（开天辟地之裂变的大地）》桌游 RMB 321' },
-  { app: '地图', color: '#007aff', glyph: 'pin', time: '15:15', title: '前方 400 米直行', body: '文化佳园' },
-  { app: '音乐', color: '#ff3b30', glyph: 'play', time: '15:18', title: '正在播放', body: '《爱情公寓》' },
-  { app: '邮件', color: '#007aff', glyph: 'mail', time: '15:22', title: '未读 1 封', body: '发信人：拒绝者' },
-  { app: 'App Store', color: '#007aff', glyph: 'bag', time: '15:25', title: '今日推荐', body: '小龙虾' },
-  { app: '家庭', color: '#ff9500', glyph: 'house', time: '15:30', title: '客厅的灯已关闭', body: '下午 3:30' },
-  { app: '备忘录', color: '#ffcc00', glyph: 'note', time: '15:33', title: '新备忘录', body: '请记住，天使与你同在，你本来就很美' },
-  { app: '屏幕使用时间', color: '#5856d6', glyph: 'chart', time: '15:40', title: '本周日均 4 小时 12 分', body: '较上周持平' },
-  { app: '日历', color: '#ff3b30', glyph: 'cal', time: '15:45', title: '今天 15:00', body: '「与裤袋的会议」已取消' },
-  { app: '照片', color: '#ff2d55', glyph: 'flower', time: '15:50', title: '回忆', body: '一起去看流星雨' },
-  { app: '播客', color: '#af52de', glyph: 'mic', time: '15:55', title: '新单集', body: '《决战紫禁之巅》' },
-  { app: '设置', color: '#8e8e93', glyph: 'find', time: '16:00', title: '完成设置', body: '还剩 4 项，其中 3 项需要两只手' },
+  { app: '提醒事项', color: '#ff9500', glyph: 'check', time: '00:52', title: '今日有一项日程', body: '20:00 终极泳池派对' },
+  { app: '天气', color: '#007aff', glyph: 'sun', time: '00:47', title: '今日晴', body: '宜观赏流星雨' },
+  { app: '钱包', color: '#1c1c1e', glyph: 'card', time: '00:41', title: '最近交易', body: '《飞跃创界山（开天辟地之裂变的大地）》桌游 RMB 321' },
+  { app: '地图', color: '#007aff', glyph: 'pin', time: '00:36', title: '前方 400 米直行', body: '文化佳园' },
+  { app: '邮件', color: '#007aff', glyph: 'mail', time: '00:29', title: '未读 1 封', body: '发信人：拒绝者' },
+  { app: 'App Store', color: '#007aff', glyph: 'bag', time: '00:24', title: '今日推荐', body: '小龙虾' },
+  { app: '备忘录', color: '#ffcc00', glyph: 'note', time: '00:17', title: '新备忘录', body: '请记住，天使与你同在，你本来就很美' },
+  { app: '照片', color: '#ff2d55', glyph: 'flower', time: '00:11', title: '回忆', body: '一起去看流星雨' },
+  { app: '播客', color: '#af52de', glyph: 'mic', time: '00:04', title: '新单集', body: '《决战紫禁之巅》' },
 ]
 
 /* --- primitives --------------------------------------------------- */
@@ -456,10 +467,14 @@ function appIcon(ctx: CanvasRenderingContext2D, color: string, kind: Glyph, x: n
    a phone wallpaper.
    ------------------------------------------------------------------ */
 
-/** Where the supplied wall art lives. Swapped by replacing public/wallpaper.jpg. */
+/** Where the supplied art lives. Swap by replacing the file in public/. */
 const WALLPAPER_URL = '/wallpaper.jpg'
+const ALBUM_URL = '/album.jpg'
 
-export function loadWallpaper(): Promise<HTMLImageElement | null> {
+export const loadWallpaper = () => loadImage(WALLPAPER_URL)
+export const loadAlbumArt = () => loadImage(ALBUM_URL)
+
+function loadImage(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     let settled = false
     const done = (v: HTMLImageElement | null) => {
@@ -468,14 +483,15 @@ export function loadWallpaper(): Promise<HTMLImageElement | null> {
       resolve(v)
     }
     // Boot must not wait on the network. The phone can be built without
-    // this: the fallback below is a perfectly good dark wallpaper, and a
-    // hung request would otherwise leave the page with no 3D at all.
+    // either image: the wallpaper falls back to a procedural gradient and
+    // the album tile to a grey square, and a hung request would otherwise
+    // leave the page with no 3D at all.
     window.setTimeout(() => done(null), 3000)
     const img = new Image()
     img.decoding = 'async'
     img.onload = () => done(img)
     img.onerror = () => done(null)
-    img.src = WALLPAPER_URL
+    img.src = url
   })
 }
 
@@ -585,7 +601,7 @@ function statusBar(ctx: CanvasRenderingContext2D) {
   ctx.textBaseline = 'alphabetic'
   // 17 pt semibold, sat on the row's optical centre rather than on a
   // baseline that happened to look right on its own.
-  ctx.fillText('9:41', 140, cy + Math.round(17 * PT * 0.35))
+  ctx.fillText(CLOCK_TIME, 140, cy + Math.round(17 * PT * 0.35))
 
   // Laid out from the right edge inward, so the trailing inset matches
   // the 140 the clock has on the left.
@@ -629,11 +645,11 @@ function clockAndDate(ctx: CanvasRenderingContext2D) {
   ctx.textAlign = 'center'
   ctx.fillStyle = '#ffffff'
   ctx.font = `600 300px ${FONT}`
-  ctx.fillText('9:41', VW / 2, 1500)
+  ctx.fillText(CLOCK_TIME, VW / 2, 1500)
 
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.font = `400 110px ${FONT}`
-  ctx.fillText('9月12日 星期二', VW / 2, 1700)
+  ctx.fillText(CLOCK_DATE, VW / 2, 1700)
 }
 
 /**
@@ -682,21 +698,203 @@ function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number): nu
   ctx.textAlign = 'right'
   ctx.fillStyle = 'rgba(255,255,255,0.52)'
   ctx.font = timeFont
-  ctx.fillText(n.time, x + w - pad, top + 148)
+  ctx.fillText(n.time, x + w - pad, top + 208)
   const timeW = ctx.measureText(n.time).width
 
   ctx.textAlign = 'left'
   ctx.fillStyle = '#ffffff'
   ctx.font = titleFont
-  ctx.fillText(fit(ctx, n.title, x + w - pad - timeW - 28 - textX), textX, top + 148)
+  ctx.fillText(fit(ctx, n.title, x + w - pad - timeW - 28 - textX), textX, top + 208)
 
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.font = bodyFont
   lines.forEach((ln, i) => {
-    ctx.fillText(ln, textX, top + 262 + i * BODY_LINE)
+    ctx.fillText(ln, textX, top + 368 + i * BODY_LINE)
   })
 
   return cardH
+}
+
+/* --- Now Playing --------------------------------------------------
+   Drawn from the supplied artwork rather than an SF Symbol set: the
+   artwork is a real image, the transport glyphs are shapes, and the
+   scrubber is a rounded track with a knob, which is all the reference has
+   in it.
+   ------------------------------------------------------------------ */
+
+/** Album art, or a grey tile if the image did not load. */
+function albumArt(
+  ctx: CanvasRenderingContext2D,
+  art: HTMLImageElement | null,
+  x: number,
+  y: number,
+  size: number
+) {
+  const radius = size * 0.09
+  ctx.save()
+  rr(ctx, x, y, size, size, radius)
+  ctx.clip()
+  if (art) {
+    // Cover, not fit: the artwork is square and so is the tile, so this
+    // only matters if someone swaps in a non-square image.
+    const scale = Math.max(size / art.width, size / art.height)
+    const dw = art.width * scale
+    const dh = art.height * scale
+    ctx.drawImage(art, x + (size - dw) / 2, y + (size - dh) / 2, dw, dh)
+  } else {
+    ctx.fillStyle = '#3a3d44'
+    ctx.fillRect(x, y, size, size)
+    glyph(ctx, 'play', x + size / 2, y + size / 2, size * 0.42)
+  }
+  ctx.restore()
+  // A hairline, so a light cover does not bleed into a light card.
+  ctx.save()
+  rr(ctx, x, y, size, size, radius)
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+  ctx.restore()
+}
+
+/** The three-bar "now playing" mark that sits at the top right. */
+function nowPlayingMark(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
+  const heights = [0.45, 1, 0.62, 0.32]
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'
+  for (let i = 0; i < heights.length; i++) {
+    const h = s * heights[i]
+    rr(ctx, cx + (i - 1.5) * (s * 0.38) - s * 0.09, cy - h / 2, s * 0.19, h, s * 0.08)
+    ctx.fill()
+  }
+}
+
+function transportIcon(
+  ctx: CanvasRenderingContext2D,
+  kind: 'star' | 'prev' | 'pause' | 'next' | 'phones',
+  cx: number,
+  cy: number,
+  s: number
+) {
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)'
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+
+  switch (kind) {
+    case 'star': {
+      ctx.beginPath()
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5
+        const rad = i % 2 === 0 ? s * 0.5 : s * 0.22
+        const px = cx + Math.cos(a) * rad
+        const py = cy + Math.sin(a) * rad
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      ctx.fill()
+      break
+    }
+    case 'prev':
+    case 'next': {
+      // Two triangles, apexes in the direction of travel. `u` flips the
+      // whole pair: +1 puts the apexes at negative x (previous), -1 at
+      // positive x (next).
+      const u = kind === 'prev' ? 1 : -1
+      for (const [apex, base] of [
+        [-0.86, -0.22],
+        [-0.14, 0.5],
+      ]) {
+        ctx.beginPath()
+        ctx.moveTo(cx + apex * u * s, cy)
+        ctx.lineTo(cx + base * u * s, cy - s * 0.42)
+        ctx.lineTo(cx + base * u * s, cy + s * 0.42)
+        ctx.closePath()
+        ctx.fill()
+      }
+      break
+    }
+    case 'pause': {
+      const gap = s * 0.16
+      const w = s * 0.24
+      const h = s * 0.86
+      rr(ctx, cx - gap - w, cy - h / 2, w, h, w * 0.28)
+      ctx.fill()
+      rr(ctx, cx + gap, cy - h / 2, w, h, w * 0.28)
+      ctx.fill()
+      break
+    }
+    case 'phones': {
+      ctx.lineWidth = s * 0.13
+      ctx.beginPath()
+      ctx.arc(cx, cy - s * 0.06, s * 0.42, Math.PI * 1.05, Math.PI * 1.95)
+      ctx.stroke()
+      rr(ctx, cx - s * 0.5, cy - s * 0.06, s * 0.24, s * 0.44, s * 0.09)
+      ctx.fill()
+      rr(ctx, cx + s * 0.26, cy - s * 0.06, s * 0.24, s * 0.44, s * 0.09)
+      ctx.fill()
+      break
+    }
+  }
+}
+
+function nowPlaying(ctx: CanvasRenderingContext2D, art: HTMLImageElement | null, top: number) {
+  const { x, w } = CARD
+  const { h, pad, art: artSize } = NOW_PLAYING
+
+  rr(ctx, x, top, w, h, CARD.r)
+  ctx.fillStyle = 'rgba(255,255,255,0.13)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  albumArt(ctx, art, x + pad, top + pad, artSize)
+
+  const textX = x + pad + artSize + 38
+  const titleY = top + pad + 74
+  const artRight = x + w - pad - 90
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `600 ${Math.round(19 * PT)}px ${FONT}`
+  ctx.fillText(fit(ctx, '我的未来式', artRight - textX), textX, titleY)
+
+  ctx.fillStyle = 'rgba(255,255,255,0.62)'
+  ctx.font = `400 ${Math.round(16 * PT)}px ${FONT}`
+  ctx.fillText(fit(ctx, '郭采洁', artRight - textX), textX, titleY + 96)
+
+  nowPlayingMark(ctx, x + w - pad - 42, titleY - 24, 72)
+
+  // Scrubber. 0:08 into a 5:46 track, which is what the reference shows
+  // and is also the only defensible position: a bar that is obviously
+  // wrong at a glance would be worse than one that is merely static.
+  const barY = top + 470
+  const barX0 = x + pad + 132
+  const barX1 = x + w - pad - 132
+  const progress = 0.023
+
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'
+  rr(ctx, barX0, barY - 5, barX1 - barX0, 10, 5)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,0.95)'
+  rr(ctx, barX0, barY - 5, (barX1 - barX0) * progress, 10, 5)
+  ctx.fill()
+
+  ctx.font = `400 ${Math.round(13 * PT)}px ${FONT}`
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'
+  ctx.textAlign = 'left'
+  ctx.fillText('0:08', x + pad, barY + 6)
+  ctx.textAlign = 'right'
+  ctx.fillText('-5:38', x + w - pad, barY + 6)
+
+  const rowY = top + 700
+  const kinds = ['star', 'prev', 'pause', 'next', 'phones'] as const
+  kinds.forEach((k, i) => {
+    transportIcon(ctx, k, x + w * ((i + 0.5) / kinds.length), rowY, 96)
+  })
+
+  return h
 }
 
 function bottomControls(ctx: CanvasRenderingContext2D) {
@@ -791,6 +989,7 @@ function addDisplayBloom(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
 export function createScreenCanvas(
   targetWidth: number,
   photo: HTMLImageElement | null = null,
+  album: HTMLImageElement | null = null,
   bloom = true
 ): HTMLCanvasElement {
   const scale = targetWidth / VW
@@ -808,6 +1007,8 @@ export function createScreenCanvas(
   lockGlyph(ctx, 1080)
   clockAndDate(ctx)
   let notifyY = CARD.first
+  // Now Playing sits above the notifications, the way iOS stacks it.
+  notifyY += nowPlaying(ctx, album, notifyY) + CARD.gap
   for (const n of NOTICES) {
     notifyY += notification(ctx, n, notifyY) + CARD.gap
   }
@@ -831,9 +1032,10 @@ export function screenTextureWidth(): number {
 
 export function createScreenTexture(
   maxAnisotropy: number,
-  photo: HTMLImageElement | null = null
+  photo: HTMLImageElement | null = null,
+  album: HTMLImageElement | null = null
 ): THREE.CanvasTexture {
-  const canvas = createScreenCanvas(screenTextureWidth(), photo)
+  const canvas = createScreenCanvas(screenTextureWidth(), photo, album)
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = Math.min(maxAnisotropy, 16)
