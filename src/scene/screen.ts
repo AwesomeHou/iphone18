@@ -27,18 +27,16 @@ const FONT =
 const CARD = {
   x: 90,
   w: 1260,
-  h: 460,
-  /**
-   * Vertical gap between cards, not a fixed pitch. Cards are as tall as
-   * their body needs: a notification body that does not fit on one line
-   * wraps to a second, exactly as iOS does, and the list below it moves
-   * down. A fixed pitch plus a truncating body would silently eat the
-   * text, which is what it did to the wallet notification.
-   */
-  gap: 92,
-  first: 1980,
   r: 56,
+  /** Top of the list, below the clock and the date. */
+  first: 1980,
+  /** The list is laid out to end here, just above the home controls. */
+  bottom: 8400,
 }
+
+/** Minimum and maximum card height, in design units (90 pt to 142 pt). */
+const CARD_MIN = 300
+const CARD_MAX = 520
 
 /** Line height for a wrapped body. */
 const BODY_LINE = 84
@@ -54,6 +52,37 @@ const NOW_PLAYING = {
   h: 860,
   pad: 62,
   art: 280,
+}
+
+interface Metrics {
+  h: number
+  gap: number
+}
+
+/**
+ * Card height and gap for however many notifications there happen to be.
+ *
+ * These were tuned by hand twice and were wrong twice: eighteen items
+ * needed 330 and 52, eleven needed 460 and 92, and with fourteen the
+ * hand-picked numbers run 350 units off the bottom of the panel. Rather
+ * than keep guessing, the pair is solved so the list always ends at
+ * CARD.bottom: the gap is a fixed fraction of the card, and the card is
+ * whatever is left over. The bounds stop it from going silly at the
+ * extremes — a very short list would otherwise give 140 pt cards with the
+ * text floating in the middle of them.
+ */
+function cardMetrics(count: number, extraLines: number): Metrics {
+  const avail = CARD.bottom - CARD.first - NOW_PLAYING.h - extraLines * BODY_LINE
+  // 1.2 = one card plus its 0.2 gap, per item.
+  let h = avail / (1.2 * count)
+  h = Math.min(CARD_MAX, Math.max(CARD_MIN, h))
+  let gap = Math.round(h * 0.2)
+  const need = count * h + count * gap + extraLines * BODY_LINE
+  if (need > avail) {
+    // Clamped at the floor and still too tall: take the rest out of the gap.
+    gap = Math.max(16, gap - Math.ceil((need - avail) / count))
+  }
+  return { h: Math.round(h), gap }
 }
 
 interface Notice {
@@ -79,6 +108,8 @@ type Glyph =
   | 'bag'
   | 'house'
   | 'note'
+  | 'book'
+  | 'news'
   | 'chart'
   | 'cal'
   | 'flower'
@@ -92,15 +123,18 @@ type Glyph =
    reads 1:00. */
 const NOTICES: Notice[] = [
   { app: '超信', color: '#07c160', glyph: 'bubble', time: '现在', title: '诺澜', body: '「我等你」等 7 条新消息' },
-  { app: '提醒事项', color: '#ff9500', glyph: 'check', time: '00:52', title: '今日有一项日程', body: '20:00 终极泳池派对' },
-  { app: '天气', color: '#007aff', glyph: 'sun', time: '00:47', title: '今日晴', body: '宜观赏流星雨' },
-  { app: '钱包', color: '#1c1c1e', glyph: 'card', time: '00:41', title: '最近交易', body: '《飞跃创界山（开天辟地之裂变的大地）》桌游 RMB 321' },
-  { app: '地图', color: '#007aff', glyph: 'pin', time: '00:36', title: '前方 400 米直行', body: '文化佳园' },
-  { app: '邮件', color: '#007aff', glyph: 'mail', time: '00:29', title: '未读 1 封', body: '发信人：拒绝者' },
-  { app: 'App Store', color: '#007aff', glyph: 'bag', time: '00:24', title: '今日推荐', body: '小龙虾' },
-  { app: '备忘录', color: '#ffcc00', glyph: 'note', time: '00:17', title: '新备忘录', body: '请记住，天使与你同在，你本来就很美' },
-  { app: '照片', color: '#ff2d55', glyph: 'flower', time: '00:11', title: '回忆', body: '一起去看流星雨' },
-  { app: '播客', color: '#af52de', glyph: 'mic', time: '00:04', title: '新单集', body: '《决战紫禁之巅》' },
+  { app: '图书', color: '#ff5b2e', glyph: 'book', time: '00:56', title: '《爱情三脚猫》', body: '您订阅的漫画更新了' },
+  { app: '新闻', color: '#ff375f', glyph: 'news', time: '00:50', title: '独家揭秘「蟑螂鼠」之谜', body: '热点 · 阅读 12 万' },
+  { app: '新闻', color: '#ff375f', glyph: 'news', time: '00:44', title: '黄宝强登顶首富', body: '财经 · 阅读 8.6 万' },
+  { app: '提醒事项', color: '#ff9500', glyph: 'check', time: '00:38', title: '今日有一项日程', body: '20:00 终极泳池派对' },
+  { app: '天气', color: '#007aff', glyph: 'sun', time: '00:33', title: '今日晴', body: '宜观赏流星雨' },
+  { app: '钱包', color: '#1c1c1e', glyph: 'card', time: '00:28', title: '最近交易', body: '《飞跃创界山（开天辟地之裂变的大地）》桌游 RMB 321' },
+  { app: '地图', color: '#007aff', glyph: 'pin', time: '00:23', title: '前方 400 米直行', body: '文化佳园' },
+  { app: '邮件', color: '#007aff', glyph: 'mail', time: '00:18', title: '未读 1 封', body: '发信人：拒绝者' },
+  { app: 'App Store', color: '#007aff', glyph: 'bag', time: '00:14', title: '今日推荐', body: '小龙虾' },
+  { app: '备忘录', color: '#ffcc00', glyph: 'note', time: '00:09', title: '新备忘录', body: '请记住，天使与你同在，你本来就很美' },
+  { app: '照片', color: '#ff2d55', glyph: 'flower', time: '00:05', title: '回忆', body: '一起去看流星雨' },
+  { app: '播客', color: '#af52de', glyph: 'mic', time: '00:02', title: '新单集', body: '《桃花侠大战菊花怪》' },
 ]
 
 /* --- primitives --------------------------------------------------- */
@@ -389,6 +423,28 @@ function glyph(ctx: CanvasRenderingContext2D, kind: Glyph, cx: number, cy: numbe
         ctx.stroke()
       }
       break
+    case 'book':
+      // An open book: two slanted pages with a spine gap between them.
+      // A filled rectangle reads as a card, not a book, at this size.
+      for (const dir of [-1, 1]) {
+        ctx.beginPath()
+        ctx.moveTo(cx + dir * s * 0.05, cy - s * 0.44)
+        ctx.lineTo(cx + dir * s * 0.54, cy - s * 0.62)
+        ctx.lineTo(cx + dir * s * 0.54, cy + s * 0.44)
+        ctx.lineTo(cx + dir * s * 0.05, cy + s * 0.62)
+        ctx.closePath()
+        ctx.fill()
+      }
+      break
+    case 'news':
+      ctx.lineWidth = s * 0.13
+      rr(ctx, cx - s * 0.6, cy - s * 0.62, s * 1.2, s * 1.24, s * 0.12)
+      ctx.stroke()
+      ctx.fillRect(cx - s * 0.38, cy - s * 0.4, s * 0.46, s * 0.44)
+      ctx.fillRect(cx + s * 0.18, cy - s * 0.4, s * 0.2, s * 0.44)
+      ctx.fillRect(cx - s * 0.38, cy + s * 0.18, s * 0.76, s * 0.1)
+      ctx.fillRect(cx - s * 0.38, cy + s * 0.38, s * 0.48, s * 0.1)
+      break
     case 'chart':
       for (let i = 0; i < 3; i++) {
         const h = s * (0.34 + i * 0.22)
@@ -666,8 +722,13 @@ function clockAndDate(ctx: CanvasRenderingContext2D) {
  * first line, so it sits between the two lines the way the reference
  * does.
  */
-function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number): number {
-  const { x, w, h, r } = CARD
+function notification(
+  ctx: CanvasRenderingContext2D,
+  n: Notice,
+  top: number,
+  baseH: number
+): number {
+  const { x, w, r } = CARD
 
   const icon = 146
   const pad = 40
@@ -677,12 +738,17 @@ function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number): nu
   const titleFont = `600 ${Math.round(17 * PT)}px ${FONT}`
   const timeFont = `400 ${Math.round(13 * PT)}px ${FONT}`
 
+  // Vertical positions ride the card's height, so the type stays put
+  // relative to the card when cardMetrics() changes it.
+  const titleY = Math.round(baseH * 0.452)
+  const bodyY = Math.round(baseH * 0.8)
+
   // Measure before drawing: the card's height depends on how many lines
   // the body needs, and the icon centres on that height.
   ctx.textBaseline = 'alphabetic'
   ctx.font = bodyFont
   const lines = wrapText(ctx, n.body, bodyMax, BODY_LINES)
-  const cardH = h + (lines.length - 1) * BODY_LINE
+  const cardH = baseH + (lines.length - 1) * BODY_LINE
 
   rr(ctx, x, top, w, cardH, r)
   ctx.fillStyle = 'rgba(255,255,255,0.10)'
@@ -698,18 +764,18 @@ function notification(ctx: CanvasRenderingContext2D, n: Notice, top: number): nu
   ctx.textAlign = 'right'
   ctx.fillStyle = 'rgba(255,255,255,0.52)'
   ctx.font = timeFont
-  ctx.fillText(n.time, x + w - pad, top + 208)
+  ctx.fillText(n.time, x + w - pad, top + titleY)
   const timeW = ctx.measureText(n.time).width
 
   ctx.textAlign = 'left'
   ctx.fillStyle = '#ffffff'
   ctx.font = titleFont
-  ctx.fillText(fit(ctx, n.title, x + w - pad - timeW - 28 - textX), textX, top + 208)
+  ctx.fillText(fit(ctx, n.title, x + w - pad - timeW - 28 - textX), textX, top + titleY)
 
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.font = bodyFont
   lines.forEach((ln, i) => {
-    ctx.fillText(ln, textX, top + 368 + i * BODY_LINE)
+    ctx.fillText(ln, textX, top + bodyY + i * BODY_LINE)
   })
 
   return cardH
@@ -1006,11 +1072,20 @@ export function createScreenCanvas(
   statusBar(ctx)
   lockGlyph(ctx, 1080)
   clockAndDate(ctx)
+  // How many bodies need a second line decides how much height is left for
+  // the cards, and the cards decide the gap, so this has to be measured
+  // before anything is drawn.
+  const bodyFont = `400 ${Math.round(17 * PT)}px ${FONT}`
+  ctx.font = bodyFont
+  const bodyMax = CARD.w - 80 - (40 + 146 + 30)
+  const extraLines = NOTICES.filter((n) => wrapText(ctx, n.body, bodyMax, 3).length > 1).length
+  const metrics = cardMetrics(NOTICES.length, extraLines)
+
   let notifyY = CARD.first
   // Now Playing sits above the notifications, the way iOS stacks it.
-  notifyY += nowPlaying(ctx, album, notifyY) + CARD.gap
+  notifyY += nowPlaying(ctx, album, notifyY) + metrics.gap
   for (const n of NOTICES) {
-    notifyY += notification(ctx, n, notifyY) + CARD.gap
+    notifyY += notification(ctx, n, notifyY, metrics.h) + metrics.gap
   }
   bottomControls(ctx)
 
